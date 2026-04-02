@@ -22,3 +22,23 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# OS / IDE
+.DS_Store
+.idea/
+
+# Env / local secrets
+.env
+.env.*
+.secrets/
+
+# Runtime logs
+logs/
+
+# Maven / Java build outputs
+**/target/
+
+# Frontend build outputs
+**/node_modules/
+**/dist/
+

@@ -1,0 +1,7 @@
+-- Note: User and permissions already handled by Docker's entrypoint
+-- with MYSQL_USER and MYSQL_PASSWORD environment variables
+-- The Docker MySQL init automatically:
+-- 1. Creates the database specified in MYSQL_DATABASE
+-- 2. Creates the user specified in MYSQL_USER with password MYSQL_PASSWORD
+-- 3. Grants all privileges on the database to that user
+-- No additional GRANT statements are needed

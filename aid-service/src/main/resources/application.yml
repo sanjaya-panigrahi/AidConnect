@@ -1,0 +1,101 @@
+server:
+  port: 8084
+
+spring:
+  config:
+    # Reads /run/secrets/* as properties when running in Docker with secrets.
+    import: optional:configtree:/run/secrets/
+  application:
+    name: aid-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3309/aid_service_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD_SECRET:}}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: aid-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: com.chatassist.common.dto
+        spring.json.value.default.type: com.chatassist.common.dto.ChatMessageEvent
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:${OPENAI_API_KEY_SECRET:}}
+      chat:
+        options:
+          model: gpt-4o-mini
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+          min-idle: 1
+  cache:
+    type: redis
+
+chatassist:
+  discovery:
+    enabled: ${CHATASSIST_DISCOVERY_ENABLED:true}
+
+services:
+  user-service:
+    base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}
+  chat-service:
+    base-url: ${CHAT_SERVICE_BASE_URL:http://localhost:8082}
+
+eureka:
+  client:
+    enabled: ${chatassist.discovery.enabled}
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# SpringDoc OpenAPI / Swagger Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.chatassist: INFO
+    org.springframework.kafka: INFO
+  file:
+    # In Docker, compose mounts host ./logs to /app/logs.
+    name: /app/logs/aid-service.log
+    max-size: 10MB
+    max-history: 30
+    total-size-cap: 1GB
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+

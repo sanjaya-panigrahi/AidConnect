@@ -1,0 +1,332 @@
+name: chat-assist-app
+
+services:
+
+  mysql-user:
+    image: mysql:8.0
+    container_name: db-user-service
+    environment:
+      # Default env mode: MYSQL_ROOT_PASSWORD / USER_DB_PASSWORD.
+      # Optional file mode: set MYSQL_DB_ROOT_PASSWORD_FILE and MYSQL_USER_DB_PASSWORD_FILE,
+      # and set MYSQL_DB_ROOT_PASSWORD / MYSQL_USER_DB_PASSWORD to empty to avoid env+_FILE conflicts.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_DB_ROOT_PASSWORD-${MYSQL_ROOT_PASSWORD?set MYSQL_ROOT_PASSWORD}}
+      MYSQL_ROOT_PASSWORD_FILE: ${MYSQL_DB_ROOT_PASSWORD_FILE-}
+      MYSQL_DATABASE: ${USER_DB_NAME:-user_service_db}
+      MYSQL_USER: ${USER_DB_USER:-chat_user}
+      MYSQL_PASSWORD: ${MYSQL_USER_DB_PASSWORD-${USER_DB_PASSWORD?set USER_DB_PASSWORD}}
+      MYSQL_PASSWORD_FILE: ${MYSQL_USER_DB_PASSWORD_FILE-}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_user_data:/var/lib/mysql
+      - ./init-db.sql/user-service:/docker-entrypoint-initdb.d:ro
+    secrets:
+      - source: mysql_root_password_secret
+        target: MYSQL_ROOT_PASSWORD_SECRET
+      - source: user_db_password_secret
+        target: USER_DB_PASSWORD_SECRET
+    healthcheck:
+      test: ["CMD-SHELL", "pw=\"$${MYSQL_ROOT_PASSWORD:-$$(cat /run/secrets/MYSQL_ROOT_PASSWORD_SECRET 2>/dev/null)}\" && mysqladmin ping -h localhost -u root -p$$pw --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mysql-chat:
+    image: mysql:8.0
+    container_name: db-chat-service
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_DB_ROOT_PASSWORD-${MYSQL_ROOT_PASSWORD?set MYSQL_ROOT_PASSWORD}}
+      MYSQL_ROOT_PASSWORD_FILE: ${MYSQL_DB_ROOT_PASSWORD_FILE-}
+      MYSQL_DATABASE: ${CHAT_DB_NAME:-chat_service_db}
+      MYSQL_USER: ${CHAT_DB_USER:-chat_user}
+      MYSQL_PASSWORD: ${MYSQL_CHAT_DB_PASSWORD-${CHAT_DB_PASSWORD?set CHAT_DB_PASSWORD}}
+      MYSQL_PASSWORD_FILE: ${MYSQL_CHAT_DB_PASSWORD_FILE-}
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_chat_data:/var/lib/mysql
+      - ./init-db.sql/chat-service:/docker-entrypoint-initdb.d:ro
+    secrets:
+      - source: mysql_root_password_secret
+        target: MYSQL_ROOT_PASSWORD_SECRET
+      - source: chat_db_password_secret
+        target: CHAT_DB_PASSWORD_SECRET
+    healthcheck:
+      test: [ "CMD-SHELL", "pw=\"$${MYSQL_PASSWORD:-$$(cat /run/secrets/CHAT_DB_PASSWORD_SECRET 2>/dev/null)}\" && mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$pw --silent" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  mysql-aid:
+    image: mysql:8.0
+    container_name: db-aid-service
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_DB_ROOT_PASSWORD-${MYSQL_ROOT_PASSWORD?set MYSQL_ROOT_PASSWORD}}
+      MYSQL_ROOT_PASSWORD_FILE: ${MYSQL_DB_ROOT_PASSWORD_FILE-}
+      MYSQL_DATABASE: ${AID_DB_NAME:-aid_service_db}
+      MYSQL_USER: ${AID_DB_USER:-chat_user}
+      MYSQL_PASSWORD: ${MYSQL_AID_DB_PASSWORD-${AID_DB_PASSWORD?set AID_DB_PASSWORD}}
+      MYSQL_PASSWORD_FILE: ${MYSQL_AID_DB_PASSWORD_FILE-}
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql_aid_data:/var/lib/mysql
+      - ./init-db.sql/aid-service:/docker-entrypoint-initdb.d:ro
+    secrets:
+      - source: mysql_root_password_secret
+        target: MYSQL_ROOT_PASSWORD_SECRET
+      - source: aid_db_password_secret
+        target: AID_DB_PASSWORD_SECRET
+    healthcheck:
+      test: ["CMD-SHELL", "pw=\"$${MYSQL_ROOT_PASSWORD:-$$(cat /run/secrets/MYSQL_ROOT_PASSWORD_SECRET 2>/dev/null)}\" && mysqladmin ping -h localhost -u root -p$$pw --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Cache layer ─────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis-chat-assist-app
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Message broker ──────────────────────────────────────────────────────────
+  kafka:
+    image: bitnamilegacy/kafka:3.7
+    container_name: kafka-chat-assist-app
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_KRAFT_CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      ALLOW_PLAINTEXT_LISTENER: yes
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:latest
+    container_name: kafdrop-chat-assist-app
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: kafka:9092
+      SERVER_SERVLET_CONTEXTPATH: /
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # ── Application services ────────────────────────────────────────────────────
+
+  discovery-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_MODULE: discovery-service
+    container_name: discovery-service-chat-assist
+    environment:
+      EUREKA_INSTANCE_HOSTNAME: discovery-service
+    ports:
+      - "8761:8761"
+    volumes:
+      - ./logs:/app/logs
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_MODULE: user-service
+    container_name: user-service-chat-assist
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user:3306/${USER_DB_NAME:-user_service_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${USER_DB_USER:-chat_user}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./logs:/app/logs
+    secrets:
+      - source: user_db_password_secret
+        target: DB_PASSWORD_SECRET
+    depends_on:
+      discovery-service:
+        condition: service_started
+      mysql-user:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_MODULE: chat-service
+    container_name: chat-service-chat-assist
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-chat:3306/${CHAT_DB_NAME:-chat_service_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${CHAT_DB_USER:-chat_user}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./logs:/app/logs
+    secrets:
+      - source: chat_db_password_secret
+        target: DB_PASSWORD_SECRET
+    depends_on:
+      discovery-service:
+        condition: service_started
+      mysql-chat:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  bot-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_MODULE: bot-service
+    container_name: bot-service-chat-assist
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      USER_SERVICE_BASE_URL: http://user-service:8081
+      CHAT_SERVICE_BASE_URL: http://chat-service:8082
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_DIR: /app/logs
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./logs:/app/logs
+    secrets:
+      - source: openai_api_key_secret
+        target: OPENAI_API_KEY_SECRET
+    depends_on:
+      discovery-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  aid-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_MODULE: aid-service
+    container_name: aid-service-chat-assist
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-aid:3306/${AID_DB_NAME:-aid_service_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${AID_DB_USER:-chat_user}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      USER_SERVICE_BASE_URL: http://user-service:8081
+      CHAT_SERVICE_BASE_URL: http://chat-service:8082
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      LOG_DIR: /app/logs
+    ports:
+      - "8084:8084"
+    volumes:
+      - ./logs:/app/logs
+    secrets:
+      - source: aid_db_password_secret
+        target: DB_PASSWORD_SECRET
+    depends_on:
+      discovery-service:
+        condition: service_started
+      mysql-aid:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  chat-assist-ui:
+    build:
+      context: chat-assist-ui
+      dockerfile: Dockerfile
+      args:
+        VITE_USER_SERVICE_URL: http://localhost:8080
+        VITE_CHAT_SERVICE_URL: http://localhost:8080
+        VITE_CHAT_WS_URL: http://localhost:8080/ws-chat
+    container_name: chat-assist-ui
+    ports:
+      - "3000:80"
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_MODULE: gateway-service
+    container_name: gateway-service-chat-assist
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      discovery-service:
+        condition: service_started
+      chat-assist-ui:
+        condition: service_started
+
+volumes:
+  mysql_user_data:
+  mysql_chat_data:
+  mysql_aid_data:
+
+secrets:
+  mysql_root_password_secret:
+    file: ${MYSQL_ROOT_PASSWORD_SECRET_FILE:-./.secrets/runtime/mysql_root_password}
+  user_db_password_secret:
+    file: ${USER_DB_PASSWORD_SECRET_FILE:-./.secrets/runtime/user_db_password}
+  chat_db_password_secret:
+    file: ${CHAT_DB_PASSWORD_SECRET_FILE:-./.secrets/runtime/chat_db_password}
+  aid_db_password_secret:
+    file: ${AID_DB_PASSWORD_SECRET_FILE:-./.secrets/runtime/aid_db_password}
+  openai_api_key_secret:
+    file: ${OPENAI_API_KEY_SECRET_FILE:-./.secrets/runtime/openai_api_key}
+

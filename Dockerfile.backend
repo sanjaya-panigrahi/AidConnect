@@ -1,0 +1,54 @@
+FROM maven:3.9.9-eclipse-temurin-17 AS build
+
+ARG SERVICE_MODULE
+
+WORKDIR /workspace
+
+COPY pom.xml ./
+COPY common-service/pom.xml common-service/pom.xml
+COPY user-service/pom.xml user-service/pom.xml
+COPY chat-service/pom.xml chat-service/pom.xml
+COPY bot-service/pom.xml bot-service/pom.xml
+COPY aid-service/pom.xml aid-service/pom.xml
+COPY discovery-service/pom.xml discovery-service/pom.xml
+COPY gateway-service/pom.xml gateway-service/pom.xml
+
+RUN set -e; \
+	if [ -z "${SERVICE_MODULE}" ]; then echo "ERROR: SERVICE_MODULE not set" && exit 1; fi; \
+	success=""; \
+	for i in 1 2 3; do \
+	  if mvn -B -ntp -pl "${SERVICE_MODULE}" -am dependency:go-offline -Dmaven.wagon.http.retryHandler.count=5; then success=1; break; fi; \
+	  echo "go-offline failed (attempt ${i}), retrying..."; \
+	  sleep 5; \
+	done; \
+	if [ -z "$success" ]; then echo "ERROR: dependency:go-offline failed after retries" && exit 1; fi
+
+COPY common-service common-service
+COPY user-service user-service
+COPY chat-service chat-service
+COPY bot-service bot-service
+COPY aid-service aid-service
+COPY discovery-service discovery-service
+COPY gateway-service gateway-service
+
+RUN set -e; \
+	success=""; \
+	for i in 1 2 3; do \
+	  if mvn -B -ntp -pl "${SERVICE_MODULE}" -am clean package -DskipTests -Dmaven.wagon.http.retryHandler.count=5; then success=1; break; fi; \
+	  echo "package failed (attempt ${i}), retrying..."; \
+	  sleep 5; \
+	done; \
+	if [ -z "$success" ]; then echo "ERROR: package failed after retries" && exit 1; fi; \
+	test -f "/workspace/${SERVICE_MODULE}/target/${SERVICE_MODULE}-1.0.0.jar"
+
+FROM eclipse-temurin:17-jre-alpine
+
+ARG SERVICE_MODULE
+
+WORKDIR /app
+
+COPY --from=build /workspace/${SERVICE_MODULE}/target/${SERVICE_MODULE}-1.0.0.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
