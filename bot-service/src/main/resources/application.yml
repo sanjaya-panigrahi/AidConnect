@@ -79,17 +79,3 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
-logging:
-  level:
-    root: INFO
-    com.chatassist: INFO
-    org.springframework.kafka: INFO
-  file:
-    # In Docker, compose mounts host ./logs to /app/logs.
-    name: /app/logs/bot-service.log
-    max-size: 10MB
-    max-history: 30
-    total-size-cap: 1GB
-  pattern:
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

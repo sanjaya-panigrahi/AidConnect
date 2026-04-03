@@ -22,17 +22,4 @@ management:
     health:
       show-details: always
 
-logging:
-  level:
-    root: INFO
-    com.netflix.eureka: INFO
-    com.chatassist: INFO
-  file:
-    name: /app/logs/discovery-service.log
-    max-size: 10MB
-    max-history: 30
-    total-size-cap: 1GB
-  pattern:
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 

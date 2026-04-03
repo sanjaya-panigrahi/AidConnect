@@ -29,7 +29,8 @@ services:
       test: ["CMD-SHELL", "pw=\"$${MYSQL_ROOT_PASSWORD:-$$(cat /run/secrets/MYSQL_ROOT_PASSWORD_SECRET 2>/dev/null)}\" && mysqladmin ping -h localhost -u root -p$$pw --silent"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 30
+      start_period: 40s
 
   mysql-chat:
     image: mysql:8.0
@@ -82,7 +83,8 @@ services:
       test: ["CMD-SHELL", "pw=\"$${MYSQL_ROOT_PASSWORD:-$$(cat /run/secrets/MYSQL_ROOT_PASSWORD_SECRET 2>/dev/null)}\" && mysqladmin ping -h localhost -u root -p$$pw --silent"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 30
+      start_period: 40s
 
   # ── Cache layer ─────────────────────────────────────────────────────────────
   redis:
@@ -144,10 +146,19 @@ services:
     container_name: discovery-service-chat-assist
     environment:
       EUREKA_INSTANCE_HOSTNAME: discovery-service
+      LOG_DIR: /app/logs
     ports:
       - "8761:8761"
     volumes:
       - ./logs:/app/logs
+    # Healthcheck ensures Eureka HTTP port is actually accepting connections
+    # before dependent services attempt to register. Uses wget (available in alpine).
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   user-service:
     build:
@@ -162,6 +173,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      LOG_DIR: /app/logs
     ports:
       - "8081:8081"
     volumes:
@@ -171,7 +183,7 @@ services:
         target: DB_PASSWORD_SECRET
     depends_on:
       discovery-service:
-        condition: service_started
+        condition: service_healthy   # wait for Eureka HTTP port to be ready
       mysql-user:
         condition: service_healthy
       redis:
@@ -191,6 +203,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      LOG_DIR: /app/logs
     ports:
       - "8082:8082"
     volumes:
@@ -200,7 +213,7 @@ services:
         target: DB_PASSWORD_SECRET
     depends_on:
       discovery-service:
-        condition: service_started
+        condition: service_healthy   # wait for Eureka HTTP port to be ready
       mysql-chat:
         condition: service_healthy
       kafka:
@@ -233,7 +246,7 @@ services:
         target: OPENAI_API_KEY_SECRET
     depends_on:
       discovery-service:
-        condition: service_started
+        condition: service_healthy   # wait for Eureka HTTP port to be ready
       user-service:
         condition: service_started
       chat-service:
@@ -270,7 +283,7 @@ services:
         target: DB_PASSWORD_SECRET
     depends_on:
       discovery-service:
-        condition: service_started
+        condition: service_healthy   # wait for Eureka HTTP port to be ready
       mysql-aid:
         condition: service_healthy
       user-service:
@@ -303,13 +316,14 @@ services:
     container_name: gateway-service-chat-assist
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      LOG_DIR: /app/logs
     ports:
       - "8080:8080"
     volumes:
       - ./logs:/app/logs
     depends_on:
       discovery-service:
-        condition: service_started
+        condition: service_healthy   # wait for Eureka HTTP port to be ready
       chat-assist-ui:
         condition: service_started
 

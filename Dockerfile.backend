@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 ARG SERVICE_MODULE
@@ -13,7 +14,7 @@ COPY aid-service/pom.xml aid-service/pom.xml
 COPY discovery-service/pom.xml discovery-service/pom.xml
 COPY gateway-service/pom.xml gateway-service/pom.xml
 
-RUN set -e; \
+RUN --mount=type=cache,target=/root/.m2 set -e; \
 	if [ -z "${SERVICE_MODULE}" ]; then echo "ERROR: SERVICE_MODULE not set" && exit 1; fi; \
 	success=""; \
 	for i in 1 2 3; do \
@@ -31,7 +32,7 @@ COPY aid-service aid-service
 COPY discovery-service discovery-service
 COPY gateway-service gateway-service
 
-RUN set -e; \
+RUN --mount=type=cache,target=/root/.m2 set -e; \
 	success=""; \
 	for i in 1 2 3; do \
 	  if mvn -B -ntp -pl "${SERVICE_MODULE}" -am clean package -DskipTests -Dmaven.wagon.http.retryHandler.count=5; then success=1; break; fi; \
@@ -39,16 +40,21 @@ RUN set -e; \
 	  sleep 5; \
 	done; \
 	if [ -z "$success" ]; then echo "ERROR: package failed after retries" && exit 1; fi; \
-	test -f "/workspace/${SERVICE_MODULE}/target/${SERVICE_MODULE}-1.0.0.jar"
+	jar_path="$(find "/workspace/${SERVICE_MODULE}/target" -maxdepth 1 -type f -name '*.jar' ! -name 'original-*.jar' | head -n 1)"; \
+	if [ -z "$jar_path" ]; then echo "ERROR: built jar not found for ${SERVICE_MODULE}" && exit 1; fi; \
+	cp "$jar_path" /workspace/app.jar
 
 FROM eclipse-temurin:17-jre-alpine
 
 ARG SERVICE_MODULE
 
+RUN addgroup -S app && adduser -S app -G app
+
 WORKDIR /app
 
-COPY --from=build /workspace/${SERVICE_MODULE}/target/${SERVICE_MODULE}-1.0.0.jar app.jar
+COPY --from=build /workspace/app.jar /app/app.jar
+RUN chown -R app:app /app
 
-EXPOSE 8080
+USER app
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

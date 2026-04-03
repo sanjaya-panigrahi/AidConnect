@@ -81,15 +81,3 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
-logging:
-  level:
-    root: INFO
-    com.chatassist: INFO
-  file:
-    name: ../logs/user-service.log
-    max-size: 10MB
-    max-history: 30
-    total-size-cap: 1GB
-  pattern:
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
