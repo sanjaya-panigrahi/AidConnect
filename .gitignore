@@ -35,10 +35,12 @@ replay_pid*
 # Runtime logs
 logs/
 
+# Seed data/scripts (local-only)
+seed/
+
 # Maven / Java build outputs
 **/target/
 
 # Frontend build outputs
 **/node_modules/
 **/dist/
-
