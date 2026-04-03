@@ -1392,8 +1392,8 @@ textarea {
   }
 }
 
-/* ─── Responsive: 900px (tablet/mobile) ────────────────── */
-@media (max-width: 900px) {
+/* ─── Responsive: 768px (tablet/mobile) ────────────────── */
+@media (max-width: 768px) {
   .app-shell {
     padding: 0;
     grid-template-columns: 1fr;
