@@ -30,7 +30,7 @@ replay_pid*
 # Env / local secrets
 .env
 .env.*
-.secrets/
+secrets/
 
 # Runtime logs
 logs/
