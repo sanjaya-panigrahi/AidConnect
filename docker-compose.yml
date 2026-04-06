@@ -101,7 +101,7 @@ services:
 
   # ── Message broker ──────────────────────────────────────────────────────────
   kafka:
-    image: bitnamilegacy/kafka:3.7
+    image: confluentinc/cp-kafka:7.6.0
     container_name: kafka-chat-assist-app
     ports:
       - "9092:9092"
