@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SECRETS_DIR="$ROOT_DIR/.secrets/runtime"
+SECRETS_DIR="$ROOT_DIR/secrets/runtime"
 
 require_secret() {
   local name="$1"

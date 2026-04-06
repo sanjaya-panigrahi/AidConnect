@@ -349,13 +349,13 @@ volumes:
 
 secrets:
   mysql_root_password_secret:
-    file: ${MYSQL_ROOT_PASSWORD_SECRET_FILE:-./.secrets/runtime/mysql_root_password}
+    file: ${MYSQL_ROOT_PASSWORD_SECRET_FILE:-./secrets/runtime/mysql_root_password}
   user_db_password_secret:
-    file: ${USER_DB_PASSWORD_SECRET_FILE:-./.secrets/runtime/user_db_password}
+    file: ${USER_DB_PASSWORD_SECRET_FILE:-./secrets/runtime/user_db_password}
   chat_db_password_secret:
-    file: ${CHAT_DB_PASSWORD_SECRET_FILE:-./.secrets/runtime/chat_db_password}
+    file: ${CHAT_DB_PASSWORD_SECRET_FILE:-./secrets/runtime/chat_db_password}
   aid_db_password_secret:
-    file: ${AID_DB_PASSWORD_SECRET_FILE:-./.secrets/runtime/aid_db_password}
+    file: ${AID_DB_PASSWORD_SECRET_FILE:-./secrets/runtime/aid_db_password}
   openai_api_key_secret:
-    file: ${OPENAI_API_KEY_SECRET_FILE:-./.secrets/runtime/openai_api_key}
+    file: ${OPENAI_API_KEY_SECRET_FILE:-./secrets/runtime/openai_api_key}
 
