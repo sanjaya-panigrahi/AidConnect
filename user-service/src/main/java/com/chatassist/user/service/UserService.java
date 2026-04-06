@@ -195,10 +195,6 @@ public class UserService {
         return userMapper.toAuthResponse(user, null, "Session active");
     }
 
-    @Transactional
-    public void removeLegacyBotUsers() {
-        userRepository.deleteLegacyBots();
-    }
 
     private String resolvePasswordHash(AppUser user) {
         return requireUserCredentialRepository().findById(user.getId())

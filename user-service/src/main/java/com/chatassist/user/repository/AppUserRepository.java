@@ -29,7 +29,4 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     @Query("UPDATE AppUser u SET u.online = :online, u.lastActive = CURRENT_TIMESTAMP WHERE u.username = :username")
     void updateOnlineStatus(@Param("username") String username, @Param("online") boolean online);
 
-    @Modifying
-    @Query("DELETE FROM AppUser u WHERE u.bot = true OR lower(u.username) IN ('bot', 'docbot', 'aid', 'bor', 'borbot') OR lower(u.email) = 'bor@assistant.local'")
-    void deleteLegacyBots();
 }

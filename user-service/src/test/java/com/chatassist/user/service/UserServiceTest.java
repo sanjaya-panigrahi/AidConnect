@@ -321,14 +321,5 @@ class UserServiceTest {
                 .hasMessageContaining("User not found");
     }
 
-    @Test
-    @DisplayName("Should remove legacy bot users")
-    void testRemoveLegacyBotUsers() {
-        // Act
-        userService.removeLegacyBotUsers();
-
-        // Assert
-        verify(userRepository).deleteLegacyBots();
-    }
 }
 
