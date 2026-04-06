@@ -83,8 +83,8 @@ services:
       test: ["CMD-SHELL", "pw=\"$${MYSQL_ROOT_PASSWORD:-$$(cat /run/secrets/MYSQL_ROOT_PASSWORD_SECRET 2>/dev/null)}\" && mysqladmin ping -h localhost -u root -p$$pw --silent"]
       interval: 10s
       timeout: 5s
-      retries: 30
-      start_period: 40s
+      retries: 60
+      start_period: 60s
 
   # ── Cache layer ─────────────────────────────────────────────────────────────
   redis:
@@ -121,7 +121,8 @@ services:
       test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
       interval: 15s
       timeout: 10s
-      retries: 10
+      retries: 20
+      start_period: 60s
 
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
@@ -157,8 +158,8 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
       interval: 15s
       timeout: 10s
-      retries: 10
-      start_period: 60s
+      retries: 20
+      start_period: 90s
 
   user-service:
     build:
