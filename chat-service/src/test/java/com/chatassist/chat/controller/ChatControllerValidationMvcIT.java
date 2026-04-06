@@ -77,6 +77,7 @@ class ChatControllerValidationMvcIT {
     @DisplayName("updateStatus maps ResponseStatusException to API error contract from full MVC context")
     void updateStatusNotFoundContract() throws Exception {
         mockMvc.perform(patch("/api/chats/messages/status")
+                        .header("X-Username", "alex")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

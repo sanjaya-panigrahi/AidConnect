@@ -6,20 +6,22 @@ import com.chatassist.common.dto.LoginRequest;
 import com.chatassist.common.dto.RegisterUserRequest;
 import com.chatassist.common.dto.UserActivitySummary;
 import com.chatassist.common.dto.UserSummary;
+import com.chatassist.common.security.PasswordUtil;
 import com.chatassist.user.entity.ActivityEventType;
 import com.chatassist.user.entity.AppUser;
+import com.chatassist.user.entity.AuthAuditLog;
 import com.chatassist.user.entity.UserActivityLog;
 import com.chatassist.user.repository.AppUserRepository;
+import com.chatassist.user.repository.AuthAuditLogRepository;
 import com.chatassist.user.repository.UserActivityLogRepository;
+import com.chatassist.user.repository.UserCredentialRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -40,18 +42,22 @@ class UserServiceTest {
     @Mock
     private UserActivityLogRepository activityLogRepository;
 
+    @Mock
+    private UserCredentialRepository userCredentialRepository;
+
+    @Mock
+    private AuthAuditLogRepository authAuditLogRepository;
+
     private UserMapper userMapper;
     private UserService userService;
 
     private AppUser testUser;
-    private UserSummary testUserSummary;
 
     @BeforeEach
     void setUp() {
         userMapper = new UserMapper();
-        userService = new UserService(userRepository, userMapper, activityLogRepository);
-        testUser = new AppUser("John", "Doe", "johndoe", "password123", "john@example.com", false);
-        testUserSummary = new UserSummary(1L, "johndoe", "John", "Doe", "john@example.com", false, true, null);
+        userService = new UserService(userRepository, userMapper, activityLogRepository, userCredentialRepository, authAuditLogRepository);
+        testUser = new AppUser("John", "Doe", "johndoe", "john@example.com", false);
     }
 
     @Test
@@ -63,7 +69,7 @@ class UserServiceTest {
         );
         AppUser newUser = new AppUser(
                 request.firstName(), request.lastName(), request.username(),
-                request.password(), request.email(), false
+                request.email(), false
         );
 
         when(userRepository.existsByUsername(request.username())).thenReturn(false);
@@ -76,11 +82,13 @@ class UserServiceTest {
         // Assert
         assertThat(response).isNotNull();
         assertThat(response.username()).isEqualTo("janesmith");
-        assertThat(response.message()).isEqualTo("Registration successful");
+        assertThat(response.token()).isNull();
+        assertThat(response.message()).isEqualTo("Registration successful. Please sign in.");
         verify(userRepository).existsByUsername(request.username());
         verify(userRepository).existsByEmail(request.email());
         verify(userRepository).save(any(AppUser.class));
-        verify(activityLogRepository).save(any(UserActivityLog.class));
+        verify(userCredentialRepository).save(any());
+        verify(activityLogRepository, never()).save(any(UserActivityLog.class));
     }
 
     @Test
@@ -125,6 +133,7 @@ class UserServiceTest {
         // Arrange
         LoginRequest request = new LoginRequest("johndoe", "password123");
         when(userRepository.findByUsername(request.username())).thenReturn(Optional.of(testUser));
+        when(userCredentialRepository.findById(testUser.getId())).thenReturn(Optional.of(new com.chatassist.user.entity.UserCredential(testUser.getId(), PasswordUtil.hashPassword("password123"))));
 
         // Act
         AuthResponse response = userService.login(request);
@@ -132,8 +141,11 @@ class UserServiceTest {
         // Assert
         assertThat(response).isNotNull();
         assertThat(response.username()).isEqualTo("johndoe");
+        // Login must return a non-null JWT token for Bearer-auth clients
+        assertThat(response.token()).isNotNull().isNotBlank();
         verify(userRepository).findByUsername(request.username());
         verify(activityLogRepository).save(any(UserActivityLog.class));
+        verify(authAuditLogRepository).save(any(AuthAuditLog.class));
     }
 
     @Test
@@ -155,6 +167,7 @@ class UserServiceTest {
         // Arrange
         LoginRequest request = new LoginRequest("johndoe", "wrongpassword");
         when(userRepository.findByUsername(request.username())).thenReturn(Optional.of(testUser));
+        when(userCredentialRepository.findById(testUser.getId())).thenReturn(Optional.of(new com.chatassist.user.entity.UserCredential(testUser.getId(), PasswordUtil.hashPassword("password123"))));
 
         // Act & Assert
         assertThatThrownBy(() -> userService.login(request))
@@ -167,8 +180,8 @@ class UserServiceTest {
     void testListUsersExcluding() {
         // Arrange
         String excludeUsername = "admin";
-        AppUser user1 = new AppUser("User", "One", "user1", "pass", "user1@test.com", false);
-        AppUser user2 = new AppUser("User", "Two", "user2", "pass", "user2@test.com", false);
+        AppUser user1 = new AppUser("User", "One", "user1", "user1@test.com", false);
+        AppUser user2 = new AppUser("User", "Two", "user2", "user2@test.com", false);
         List<AppUser> users = List.of(user1, user2);
 
         when(userRepository.findByUsernameNotOrderByBotAscFirstNameAsc(excludeUsername))

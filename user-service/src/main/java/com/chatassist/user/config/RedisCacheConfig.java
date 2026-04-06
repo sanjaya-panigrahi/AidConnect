@@ -28,11 +28,11 @@ import java.util.Map;
  *
  * Cache names and TTLs
  * ─────────────────────────────────────────────
- * users:list          – 30 s  (user list per excludeUsername)
+ * users:list          – 5 min (user list per excludeUsername)
  * users:profile       – 5 min (single user by username)
- * users:assistants    – 10 min (static assistant registry)
- * users:activity      – 60 s  (per-user today activity counts)
- * users:activity:all  – 60 s  (all-users today activity counts)
+ * users:assistants    – 5 min (static assistant registry)
+ * users:activity      – 5 min (per-user today activity counts)
+ * users:activity:all  – 5 min (all-users today activity counts)
  * ─────────────────────────────────────────────
  * All keys are prefixed with "user-svc::" to avoid collisions
  * when services share the same Redis instance.
@@ -60,11 +60,11 @@ public class RedisCacheConfig implements CachingConfigurer {
         RedisCacheConfiguration base = defaultConfig();
 
         Map<String, RedisCacheConfiguration> perCache = Map.of(
-                USERS_LIST,        base.entryTtl(Duration.ofSeconds(30)),
+                USERS_LIST,        base.entryTtl(Duration.ofMinutes(5)),
                 USER_PROFILE,      base.entryTtl(Duration.ofMinutes(5)),
-                ASSISTANTS,        base.entryTtl(Duration.ofMinutes(10)),
-                USER_ACTIVITY,     base.entryTtl(Duration.ofSeconds(60)),
-                ALL_USER_ACTIVITY, base.entryTtl(Duration.ofSeconds(60))
+                ASSISTANTS,        base.entryTtl(Duration.ofMinutes(5)),
+                USER_ACTIVITY,     base.entryTtl(Duration.ofMinutes(5)),
+                ALL_USER_ACTIVITY, base.entryTtl(Duration.ofMinutes(5))
         );
 
         return RedisCacheManager.builder(redisConnectionFactory)
@@ -102,9 +102,10 @@ public class RedisCacheConfig implements CachingConfigurer {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Use EVERYTHING to include type info for all types including Lists
         objectMapper.activateDefaultTypingAsProperty(
                 LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
+                ObjectMapper.DefaultTyping.EVERYTHING,
                 "@class");
 
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);

@@ -6,6 +6,7 @@ public record AuthResponse(
         String firstName,
         String lastName,
         String email,
+        String token,
         String message
 ) {
 }

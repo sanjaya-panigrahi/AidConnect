@@ -5,7 +5,7 @@ import SockJS from 'sockjs-client';
 // ── Utilities ─────────────────────────────────────────────────────────────────
 import {
   userServiceUrl, chatServiceUrl, chatWsUrl,
-  SESSION_STORAGE_KEY, MAX_RAIL_USERNAME_CHARS
+  MAX_RAIL_USERNAME_CHARS
 } from './utils/constants';
 import { sortByTime, mergeMessages, getInitials, formatPresenceTime, formatMessageTime } from './utils/formatting';
 import { loadInitialSession, createGuestSession } from './utils/session';
@@ -23,6 +23,7 @@ import ChatPanel  from './components/chat/ChatPanel';
 export default function App() {
   // ── Session & layout state ─────────────────────────────────────────────────
   const [session, setSession]               = useState(loadInitialSession);
+  const [sessionBootstrapComplete, setSessionBootstrapComplete] = useState(() => loadInitialSession() !== null);
   const [users, setUsers]                   = useState([]);
   const [assistants, setAssistants]         = useState([]);
   const [selectedUser, setSelectedUser]     = useState(null);
@@ -109,6 +110,69 @@ export default function App() {
   useEffect(() => { sessionRef.current     = session;     }, [session]);
   useEffect(() => { selectedUserRef.current = selectedUser; }, [selectedUser]);
 
+  // ── Restore authenticated server-side session on initial load ─────────────
+  useEffect(() => {
+    let cancelled = false;
+
+    async function bootstrapSession() {
+      try {
+        const currentSession = await request(`${userServiceUrl}/api/users/session`);
+        if (!cancelled) {
+          setSession(currentSession);
+        }
+      } catch (err) {
+        if (!cancelled && err.status && err.status !== 401) {
+          setError(err.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setSessionBootstrapComplete(true);
+        }
+      }
+    }
+
+    if (session?.isGuest || session) {
+      setSessionBootstrapComplete(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    bootstrapSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Clear in-memory session when server-side auth expires ─────────────────
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      if (sessionRef.current?.isGuest) return;
+      // Clear persisted JWT so the re-login starts clean
+      clearToken();
+      setSession(null);
+      setUsers([]);
+      setAssistants([]);
+      setSelectedUser(null);
+      setMessages([]);
+      setUnreadCounts({});
+      setLastMessages({});
+      setUserActivityMap({});
+      setDraft('');
+      setActivitySummary(null);
+      setShowActivity(false);
+      loadedConvUsernameRef.current = null;
+      processedMessageIdsRef.current.clear();
+      clientRef.current?.deactivate();
+      setSessionBootstrapComplete(true);
+    };
+
+    window.addEventListener('chatassist:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('chatassist:unauthorized', handleUnauthorized);
+    };
+  }, []);
+
   // ── Clear unread count when selecting a user ───────────────────────────────
   useEffect(() => {
     if (selectedUser) {
@@ -140,8 +204,6 @@ export default function App() {
   // ── Session lifecycle: directory, presence, WebSocket, polling ────────────
   useEffect(() => {
     if (!session) return;
-
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
     refreshDirectory(true);
 
     if (!session.isGuest) {
@@ -199,7 +261,12 @@ export default function App() {
       const u = sessionRef.current?.username;
       if (!u) return;
       fetch(`${userServiceUrl}/api/users/${encodeURIComponent(u)}/offline`, {
-        method: 'PUT', keepalive: true, headers: { 'Content-Type': 'application/json' }
+        method: 'PUT',
+        keepalive: true,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       }).catch(() => undefined);
     };
     window.addEventListener('beforeunload', handleExit);
@@ -433,8 +500,8 @@ export default function App() {
   async function handleOptionSelect(opt)  { setDraft(opt); await sendMessageText(opt); }
 
   // ── Auth / session handlers ───────────────────────────────────────────────
-  async function handleLoginSuccess(sessionData) {
-    await updatePresence(sessionData.username, true);
+  function handleLoginSuccess(sessionData) {
+    setSessionBootstrapComplete(true);
     setSession(sessionData);
   }
 
@@ -443,22 +510,22 @@ export default function App() {
     setUnreadCounts({}); setLastMessages({}); setActivitySummary(null); setUserActivityMap({});
     setShowActivity(false); processedMessageIdsRef.current.clear();
     loadedConvUsernameRef.current = null;
+    setSessionBootstrapComplete(true);
     setSession(createGuestSession());
   }
 
   async function handleLogout() {
-    const username = sessionRef.current?.username || session?.username;
-    if (username && !sessionRef.current?.isGuest && !session?.isGuest) {
-      try { await request(`${userServiceUrl}/api/users/${encodeURIComponent(username)}/logout`, { method: 'POST' }); }
+    if (!sessionRef.current?.isGuest && !session?.isGuest) {
+      try { await request(`${userServiceUrl}/api/users/logout`, { method: 'POST' }); }
       catch { /* best-effort */ }
     }
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
     setSession(null); setUsers([]); setAssistants([]); setSelectedUser(null); setMessages([]);
     setUnreadCounts({}); setLastMessages({}); setUserActivityMap({});
     setDraft(''); setActivitySummary(null); setShowActivity(false);
     loadedConvUsernameRef.current = null;
     processedMessageIdsRef.current.clear();
     clientRef.current?.deactivate();
+    setSessionBootstrapComplete(true);
   }
 
   function handleSelectUser(user) {
@@ -470,6 +537,10 @@ export default function App() {
   // ─────────────────────────────────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────────────────────────────────
+
+  if (!session && !sessionBootstrapComplete) {
+    return <div className="auth-shell"><div className="auth-panel"><div className="auth-card"><p>Restoring session...</p></div></div></div>;
+  }
 
   if (!session) {
     return <AuthPage onLoginSuccess={handleLoginSuccess} onGuestAccess={handleGuestAccess} />;

@@ -1,3 +1,5 @@
+import { getStoredToken } from '../utils/session';
+
 /** Normalises the fieldErrors map returned by the API (private helper). */
 function normalizeFieldErrors(fieldErrors) {
   if (!fieldErrors || typeof fieldErrors !== 'object' || Array.isArray(fieldErrors)) return {};
@@ -20,15 +22,41 @@ async function readResponseBody(response) {
 
 /**
  * Thin fetch wrapper that throws a typed Error on non-2xx responses.
- * The error carries `.status`, `.fieldErrors`, and `.payload`.
+ *
+ * <p>Authentication strategy:
+ * <ul>
+ *   <li>If a JWT token is stored in localStorage it is sent as
+ *       {@code Authorization: Bearer <token>} (primary).</li>
+ *   <li>Browser session cookies ({@code credentials: 'include'}) are always
+ *       included as a fallback for environments where the token is absent
+ *       (e.g. server-rendered pages, deep links).</li>
+ * </ul>
+ *
+ * The error carries {@code .status}, {@code .fieldErrors}, and {@code .payload}.
  */
 export async function request(url, options = {}) {
+  const incomingHeaders = options.headers || {};
+
+  // Attach JWT Bearer token when available (preferred auth mechanism)
+  const jwtToken = getStoredToken();
+  const authHeader = jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {};
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...authHeader,
+    ...incomingHeaders, // caller-supplied headers can override, but not replace auth
+  };
+
   const response = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    credentials: 'include', // always include session cookies as fallback
+    headers,
     ...options
   });
   const body = await readResponseBody(response);
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('chatassist:unauthorized'));
+    }
     const message = typeof body === 'string'
       ? body
       : body?.message || body?.error || response.statusText || 'Request failed';
@@ -40,4 +68,3 @@ export async function request(url, options = {}) {
   }
   return body;
 }
-

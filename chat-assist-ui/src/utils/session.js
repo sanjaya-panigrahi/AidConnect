@@ -1,15 +1,49 @@
-import { SESSION_STORAGE_KEY, GUEST_USERNAME_PREFIX } from './constants';
+import { GUEST_USERNAME_PREFIX } from './constants';
 
-export function loadInitialSession() {
-  if (typeof window === 'undefined') return null;
-  const stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
-  if (!stored) return null;
+// ── LocalStorage key used to persist the JWT token across page reloads ────────
+const JWT_TOKEN_KEY = 'chatassist.jwt';
+
+/**
+ * Reads the persisted JWT token from localStorage.
+ * Returns null when none is stored (unauthenticated / guest).
+ */
+export function getStoredToken() {
   try {
-    return JSON.parse(stored);
+    return localStorage.getItem(JWT_TOKEN_KEY) || null;
   } catch {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
     return null;
   }
+}
+
+/**
+ * Stores the JWT token that was returned by the login API.
+ * Pass null / undefined to clear.
+ */
+export function storeToken(token) {
+  try {
+    if (token) {
+      localStorage.setItem(JWT_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(JWT_TOKEN_KEY);
+    }
+  } catch {
+    // Ignore (private browsing may block storage writes)
+  }
+}
+
+/**
+ * Removes the stored JWT token (called on logout).
+ */
+export function clearToken() {
+  storeToken(null);
+}
+
+/**
+ * Attempts to restore a previous authenticated session from localStorage.
+ * Returns null when the user is not logged in.
+ */
+export function loadInitialSession() {
+  return null; // Session is validated server-side via /api/users/session on startup
 }
 
 export function createGuestSession() {
@@ -24,4 +58,3 @@ export function createGuestSession() {
     isGuest: true
   };
 }
-

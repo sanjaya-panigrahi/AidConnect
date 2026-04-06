@@ -1,0 +1,849 @@
+{
+  "info": {
+    "name": "Chat Assist API Collection",
+    "description": "Postman collection aligned to currently implemented gateway-exposed APIs. Primary public APIs live in user-service and chat-service; assistant processing is exercised through /api/chats/messages.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"username\": \"johndoe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
+            },
+            "description": "Creates a new user profile and stores password hash in user_credentials."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var jsonData = pm.response.json();",
+                  "  if (jsonData.token) pm.environment.set('auth_token', jsonData.token);",
+                  "  if (jsonData.userId !== undefined && jsonData.userId !== null) pm.environment.set('user_id', jsonData.userId);",
+                  "  if (jsonData.username) pm.environment.set('username', jsonData.username);",
+                  "  console.log('Login success. JWT and user context variables updated when present.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"johndoe\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            },
+            "description": "Authenticates user, returns JWT, and creates Redis-backed SESSION cookie."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/session",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "session"
+              ]
+            },
+            "description": "Returns currently authenticated session context. Works with Bearer token or SESSION cookie fallback."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users?excludeUsername={{username}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "excludeUsername",
+                  "value": "{{username}}"
+                }
+              ]
+            },
+            "description": "Lists users, optionally excluding one username."
+          },
+          "response": []
+        },
+        {
+          "name": "List Assistants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/assistants",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "assistants"
+              ]
+            },
+            "description": "Public endpoint returning assistant summaries (bot, aid)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User By Username",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/by-username/{{target_username}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "by-username",
+                "{{target_username}}"
+              ]
+            },
+            "description": "Fetches one user profile by username."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark User Online",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{username}}/online",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{username}}",
+                "online"
+              ]
+            },
+            "description": "Marks current authenticated user online (path username must match caller)."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark User Offline",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{username}}/offline",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{username}}",
+                "offline"
+              ]
+            },
+            "description": "Marks current authenticated user offline (path username must match caller)."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout (Primary)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "logout"
+              ]
+            },
+            "description": "Primary logout endpoint: records logout event and invalidates server session."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Activity Today",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{username}}/activity/today",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{username}}",
+                "activity",
+                "today"
+              ]
+            },
+            "description": "Returns today's login/logout summary for one user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users Activity Today",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/activity/today",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "activity",
+                "today"
+              ]
+            },
+            "description": "Returns today's login/logout summary for all users."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": {{user_id}},\n  \"senderUsername\": \"{{username}}\",\n  \"receiverId\": 2,\n  \"receiverUsername\": \"{{peer_username}}\",\n  \"content\": \"Hello from Postman\",\n  \"messageType\": \"USER\",\n  \"contextUsername\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chats/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "messages"
+              ]
+            },
+            "description": "Sends one message. Assistant use-cases are also tested through this endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Message to Bot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": {{user_id}},\n  \"senderUsername\": \"{{username}}\",\n  \"receiverId\": 1001,\n  \"receiverUsername\": \"bot\",\n  \"content\": \"Explain Java streams briefly\",\n  \"messageType\": \"BOT\",\n  \"contextUsername\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chats/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "messages"
+              ]
+            },
+            "description": "Direct assistant interaction with bot."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Message to Aid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": {{user_id}},\n  \"senderUsername\": \"{{username}}\",\n  \"receiverId\": 1002,\n  \"receiverUsername\": \"aid\",\n  \"content\": \"Book me an appointment tomorrow morning\",\n  \"messageType\": \"BOT\",\n  \"contextUsername\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chats/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "messages"
+              ]
+            },
+            "description": "Direct assistant interaction with aid appointment assistant."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Mention-Routed Bot Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": {{user_id}},\n  \"senderUsername\": \"{{username}}\",\n  \"receiverId\": 2,\n  \"receiverUsername\": \"{{peer_username}}\",\n  \"content\": \"@bot summarize this thread\",\n  \"messageType\": \"USER\",\n  \"contextUsername\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chats/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "messages"
+              ]
+            },
+            "description": "Tests mention-based rerouting from a normal user chat to bot assistant."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/chats/conversation?userA={{username}}&userB={{peer_username}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "conversation"
+              ],
+              "query": [
+                {
+                  "key": "userA",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "userB",
+                  "value": "{{peer_username}}"
+                }
+              ]
+            },
+            "description": "Loads conversation history. Requester must be one of the participants."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversation with Bot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/chats/conversation?userA={{username}}&userB=bot",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "conversation"
+              ],
+              "query": [
+                {
+                  "key": "userA",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "userB",
+                  "value": "bot"
+                }
+              ]
+            },
+            "description": "Loads conversation history with bot assistant."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Message Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageId\": 1,\n  \"status\": \"SEEN\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chats/messages/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "messages",
+                "status"
+              ]
+            },
+            "description": "Updates delivery/seen status for one message."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Chat Activity Today",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/chats/{{username}}/activity/today",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "{{username}}",
+                "activity",
+                "today"
+              ]
+            },
+            "description": "Returns today's chat peer summary for one user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Chat Activity Today",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/chats/activity/today",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "activity",
+                "today"
+              ]
+            },
+            "description": "Returns today's chat peer summaries for all users."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Legacy and Internal",
+      "item": [
+        {
+          "name": "Logout (Legacy Deprecated Path)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{username}}/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{username}}",
+                "logout"
+              ]
+            },
+            "description": "Deprecated compatibility endpoint. Prefer POST /api/users/logout."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Internal Chat Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": 1001,\n  \"senderUsername\": \"bot\",\n  \"receiverId\": {{user_id}},\n  \"receiverUsername\": \"{{username}}\",\n  \"content\": \"Internal generated message\",\n  \"messageType\": \"BOT\",\n  \"contextUsername\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chats/messages/internal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "messages",
+                "internal"
+              ]
+            },
+            "description": "Internal route used by assistant services to post generated replies. Keep out of normal client flows."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Utility",
+      "item": [
+        {
+          "name": "Gateway Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "User Service Health (Direct)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/actuator/health",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Chat Service Health (Direct)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8082/actuator/health",
+              "host": [
+                "localhost"
+              ],
+              "port": "8082",
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bot Service Health (Direct)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8083/actuator/health",
+              "host": [
+                "localhost"
+              ],
+              "port": "8083",
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Aid Service Health (Direct)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8084/actuator/health",
+              "host": [
+                "localhost"
+              ],
+              "port": "8084",
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Discovery Service Health (Direct)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8761/actuator/health",
+              "host": [
+                "localhost"
+              ],
+              "port": "8761",
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "var token = pm.environment.get('auth_token');",
+          "if (!token) {",
+          "  console.log('No auth_token set. Login first or rely on stored SESSION cookie.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT token from login response (optional if using SESSION cookie)"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string",
+      "description": "Current user ID set after login"
+    },
+    {
+      "key": "username",
+      "value": "",
+      "type": "string",
+      "description": "Current username set after login"
+    },
+    {
+      "key": "peer_username",
+      "value": "janedoe",
+      "type": "string",
+      "description": "Other participant username used by conversation and send-message examples"
+    },
+    {
+      "key": "target_username",
+      "value": "janedoe",
+      "type": "string",
+      "description": "Username path variable for lookup requests"
+    }
+  ]
+}

@@ -53,7 +53,7 @@ class UserServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
-        testUser = new AppUser("John", "Doe", "johndoe", "password123", "john@example.com", false);
+        testUser = new AppUser("John", "Doe", "johndoe", "john@example.com", false);
     }
 
     @Test
@@ -91,9 +91,9 @@ class UserServiceIntegrationTest {
     @DisplayName("Should handle multiple user registrations")
     void testMultipleUserRegistration() {
         // Arrange
-        AppUser user1 = new AppUser("Alice", "Smith", "alice", "pass1", "alice@test.com", false);
-        AppUser user2 = new AppUser("Bob", "Jones", "bob", "pass2", "bob@test.com", false);
-        AppUser user3 = new AppUser("Charlie", "Brown", "charlie", "pass3", "charlie@test.com", false);
+        AppUser user1 = new AppUser("Alice", "Smith", "alice", "alice@test.com", false);
+        AppUser user2 = new AppUser("Bob", "Jones", "bob", "bob@test.com", false);
+        AppUser user3 = new AppUser("Charlie", "Brown", "charlie", "charlie@test.com", false);
 
         // Act
         userRepository.save(user1);
@@ -114,7 +114,7 @@ class UserServiceIntegrationTest {
         userRepository.save(testUser);
 
         // Act & Assert - Try to save duplicate
-        AppUser duplicateUser = new AppUser("Jane", "Doe", "johndoe", "different", "jane@example.com", false);
+        AppUser duplicateUser = new AppUser("Jane", "Doe", "johndoe", "jane@example.com", false);
         try {
             userRepository.save(duplicateUser);
             userRepository.flush();
@@ -133,7 +133,7 @@ class UserServiceIntegrationTest {
         userRepository.save(testUser);
 
         // Act & Assert - Try to save duplicate email
-        AppUser duplicateEmail = new AppUser("Jane", "Doe", "janedoe", "password", "john@example.com", false);
+        AppUser duplicateEmail = new AppUser("Jane", "Doe", "janedoe", "john@example.com", false);
         try {
             userRepository.save(duplicateEmail);
             userRepository.flush();
@@ -169,7 +169,7 @@ class UserServiceIntegrationTest {
         for (int i = 0; i < 100; i++) {
             AppUser user = new AppUser(
                     "First" + i, "Last" + i, "user" + i,
-                    "pass" + i, "user" + i + "@test.com", false
+                    "user" + i + "@test.com", false
             );
             userRepository.save(user);
         }

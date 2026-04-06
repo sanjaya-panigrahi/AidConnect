@@ -25,14 +25,33 @@ spring:
   cache:
     type: redis
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: 1
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: chat-service-test
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
 chatassist:
   discovery:
     enabled: false
+
+services:
+  user-service:
+    base-url: http://localhost:8081
 
 logging:
   level:
     root: WARN
     com.chatassist: DEBUG
     org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
 

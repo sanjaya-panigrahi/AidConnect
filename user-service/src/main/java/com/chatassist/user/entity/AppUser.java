@@ -25,9 +25,6 @@ public class AppUser {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(nullable = false)
-    private String password;
-
     @Column(nullable = false, unique = true)
     private String email;
 
@@ -43,11 +40,10 @@ public class AppUser {
     protected AppUser() {
     }
 
-    public AppUser(String firstName, String lastName, String username, String password, String email, boolean bot) {
+    public AppUser(String firstName, String lastName, String username, String email, boolean bot) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.username = username;
-        this.password = password;
         this.email = email;
         this.bot = bot;
     }
@@ -68,9 +64,6 @@ public class AppUser {
         return username;
     }
 
-    public String getPassword() {
-        return password;
-    }
 
     public String getEmail() {
         return email;

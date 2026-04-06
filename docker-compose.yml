@@ -170,9 +170,12 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user:3306/${USER_DB_NAME:-user_service_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${USER_DB_USER:-chat_user}
+      JWT_SECRET: ${JWT_SECRET:-chat-assist-jwt-secret-key-min-32-chars-required-by-hs256}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-300000}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: user-service
       LOG_DIR: /app/logs
     ports:
       - "8081:8081"
@@ -199,10 +202,13 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-chat:3306/${CHAT_DB_NAME:-chat_service_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${CHAT_DB_USER:-chat_user}
+      JWT_SECRET: ${JWT_SECRET:-chat-assist-jwt-secret-key-min-32-chars-required-by-hs256}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: chat-service
       LOG_DIR: /app/logs
     ports:
       - "8082:8082"
@@ -235,6 +241,7 @@ services:
       USER_SERVICE_BASE_URL: http://user-service:8081
       CHAT_SERVICE_BASE_URL: http://chat-service:8082
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: bot-service
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       LOG_DIR: /app/logs
     ports:
@@ -270,6 +277,7 @@ services:
       USER_SERVICE_BASE_URL: http://user-service:8081
       CHAT_SERVICE_BASE_URL: http://chat-service:8082
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: aid-service
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
@@ -316,7 +324,14 @@ services:
     container_name: gateway-service-chat-assist
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: gateway-service
+      JWT_SECRET: ${JWT_SECRET:-chat-assist-jwt-secret-key-min-32-chars-required-by-hs256}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-300000}
       LOG_DIR: /app/logs
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      CHATASSIST_AUTH_FORCE_RELOGIN_ENABLED: ${CHATASSIST_AUTH_FORCE_RELOGIN_ENABLED:-true}
+      CHATASSIST_AUTH_ABSOLUTE_TIMEOUT_MS: ${CHATASSIST_AUTH_ABSOLUTE_TIMEOUT_MS:-300000}
     ports:
       - "8080:8080"
     volumes:

@@ -1,64 +1,77 @@
 # Chat Assist App
 
-Chat Assist App is a microservices-based real-time chat platform with two built-in assistants:
-- `@bot` for general AI chat help
-- `@aid` for appointment assistance
+Real-time chat application built as a Maven multi-module microservices system.
 
-The system uses Spring Boot services for backend APIs, Kafka for async events, WebSocket/STOMP for live updates, Redis for cache, and React for UI.
+## What is implemented today
 
----
+- React/Vite UI in `chat-assist-ui`
+- Spring Cloud Gateway in `gateway-service`
+- Eureka discovery in `discovery-service`
+- User management and authentication in `user-service`
+- Chat APIs and WebSocket messaging in `chat-service`
+- AI assistant consumers in `bot-service` and `aid-service`
+- Redis for caching and server-side sessions
+- Kafka for assistant/event fan-out
+- MySQL database-per-service setup for user, chat, and aid domains
 
-## What This Project Includes
+## Current runtime shape
 
-- User registration and login
-- One-to-one real-time chat
-- Delivered/seen message status
-- Assistant routing using `@bot` and `@aid`
-- Event-driven assistant processing with Kafka
-- Service discovery and gateway routing
+| Module | Port | Role |
+|---|---:|---|
+| `chat-assist-ui` | 3000 | Browser UI |
+| `gateway-service` | 8080 | Entry point, auth, routing |
+| `user-service` | 8081 | Registration, login, directory, activity |
+| `chat-service` | 8082 | Message APIs, WebSocket, Kafka publish |
+| `bot-service` | 8083 | Kafka consumer for `@bot` replies |
+| `aid-service` | 8084 | Kafka consumer for `@aid` replies and appointment flow |
+| `discovery-service` | 8761 | Eureka registry |
+| Kafka | 9092 | Message broker |
+| Redis | 6379 | Cache and session store |
+| Kafdrop | 9000 | Kafka inspection UI |
+| MySQL user/chat/aid | 3307/3308/3309 | Per-service databases |
 
----
+## Verified implementation notes
 
-## High-Level Architecture
-
-- Frontend: `chat-assist-ui` (React + Vite) — a separate frontend module from backend services
-- API Gateway: `gateway-service`
-- Service Registry: `discovery-service` (Eureka)
-- Business Services:
+- Public REST controllers exist in:
   - `user-service`
   - `chat-service`
-  - `bot-service`
-  - `aid-service`
-- Shared/Infra:
-  - `common-service` (shared DTOs/contracts)
-  - Kafka
-  - Redis
-  - MySQL (separate DB per service domain)
+- `bot-service` and `aid-service` are currently internal assistant processors; they do **not** expose public REST controllers in the codebase.
+- Assistant routing happens through `POST /api/chats/messages`:
+  - direct chat to `bot` / `aid`
+  - or `@bot` / `@aid` mention inside a normal conversation
+- Gateway auth order is:
+  1. `Authorization: Bearer <jwt>`
+  2. Redis-backed `SESSION` cookie fallback
 
----
-
-## Technology Stack
-
-- Java 17
-- Spring Boot 3.4
-- Spring Cloud 2024 (Gateway, Eureka)
-- Spring AI 1.0 (OpenAI integration for bot/aid behavior)
-- Spring WebSocket + STOMP
-- Apache Kafka
-- Redis 7
-- MySQL 8
-- Maven
-- React 18 + Vite
-- Docker Compose
-
-## How to run
+## Run with Docker Compose
 
 ```bash
+export MYSQL_ROOT_PASSWORD=dummy
+export USER_DB_PASSWORD=dummy
+export CHAT_DB_PASSWORD=dummy
+export AID_DB_PASSWORD=dummy
+export OPENAI_API_KEY=your_key_here
+
 docker compose up --build
 ```
 
-Key URLs:
+## Main URLs
+
 - UI: `http://localhost:3000`
-- API Gateway: `http://localhost:8080`
+- Gateway: `http://localhost:8080`
 - Eureka: `http://localhost:8761`
 - Kafdrop: `http://localhost:9000`
+
+## Canonical documentation
+
+- `DOCUMENTATION_GUIDE.md` — documentation map
+- `PROJECT_ARCHITECTURE_DOCUMENT.md` — detailed architecture and implementation view
+- `ARCHITECTURE_QUICK_REFERENCE.md` — compact operational reference
+- `AUTHENTICATION_GUIDE.md` — verified auth/session flow
+- `POSTMAN_COLLECTION_GUIDE.md` — current API testing guide
+- `IMPLEMENTATION_ROADMAP.md` — next technical improvements
+- `FIXES.md` — consolidated history of implemented fixes
+
+## Notes
+
+This repository previously contained many overlapping fix reports and analysis notes. Those have been consolidated into the canonical documents above so the documentation matches the current code more closely.

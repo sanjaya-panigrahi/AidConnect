@@ -125,6 +125,17 @@
             <version>1.19.7</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>kafka</artifactId>
+            <version>1.19.7</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -137,7 +148,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy-agent.version}/byte-buddy-agent-${byte-buddy-agent.version}.jar</argLine>
+                    <argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy-agent.version}/byte-buddy-agent-${byte-buddy-agent.version}.jar -Dnet.bytebuddy.experimental=true</argLine>
+                    <forkedProcessExitTimeoutInSeconds>120</forkedProcessExitTimeoutInSeconds>
+                    <environmentVariables>
+                        <TESTCONTAINERS_PULL_PAUSE_TIMEOUT>180</TESTCONTAINERS_PULL_PAUSE_TIMEOUT>
+                    </environmentVariables>
                 </configuration>
             </plugin>
         </plugins>
@@ -151,12 +166,13 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy-agent.version}/byte-buddy-agent-${byte-buddy-agent.version}.jar</argLine>
-                            <systemPropertyVariables>
-                                <org.springframework.restdocs.outputDir>${snippetsDir}</org.springframework.restdocs.outputDir>
-                            </systemPropertyVariables>
-                        </configuration>
+                <configuration>
+                    <argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy-agent.version}/byte-buddy-agent-${byte-buddy-agent.version}.jar -Dnet.bytebuddy.experimental=true</argLine>
+                    <forkedProcessExitTimeoutInSeconds>120</forkedProcessExitTimeoutInSeconds>
+                    <systemPropertyVariables>
+                        <org.springframework.restdocs.outputDir>${snippetsDir}</org.springframework.restdocs.outputDir>
+                    </systemPropertyVariables>
+                </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.asciidoctor</groupId>

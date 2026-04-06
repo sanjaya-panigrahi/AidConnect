@@ -361,6 +361,29 @@ textarea {
   margin: 0 20px 14px;
 }
 
+.success-banner {
+  margin-top: 12px;
+  padding: 10px 13px;
+  border-radius: 8px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.success-banner-action {
+  border: 0;
+  background: transparent;
+  color: #1b5e20;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ─── App Shell ─────────────────────────────────────────── */
 .app-shell {
   height: 100vh;

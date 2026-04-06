@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
@@ -35,6 +36,7 @@ import java.util.logging.Logger;
 public class ChatMessagingService {
     private static final Logger logger = Logger.getLogger(ChatMessagingService.class.getName());
     private static final String GUEST_USERNAME_PREFIX = "guest-";
+    private static final ZoneOffset ACTIVITY_ZONE = ZoneOffset.UTC;
 
     private final ChatMessageRepository repository;
     private final ChatMessageMapper mapper;
@@ -44,7 +46,7 @@ public class ChatMessagingService {
     private final String userServiceBaseUrl;
 
     // Field-injected so existing constructors don't need changing.
-    @Autowired
+    @Autowired(required = false)
     private CacheManager cacheManager;
 
     public ChatMessagingService(ChatMessageRepository repository, ChatMessageMapper mapper,
@@ -164,16 +166,20 @@ public class ChatMessagingService {
     @Transactional(readOnly = true)
     @Cacheable(value = RedisCacheConfig.ACTIVITY_TODAY, key = "#username")
     public DailyChatPeerSummary getDailyChatPeerSummary(String username) {
-        LocalDate today = LocalDate.now();
-        long chatPeerCount = repository.countDistinctPeersForDate(username, today);
+        LocalDate today = LocalDate.now(ACTIVITY_ZONE);
+        Instant startInclusive = today.atStartOfDay(ACTIVITY_ZONE).toInstant();
+        Instant endExclusive = startInclusive.plusSeconds(24 * 60 * 60);
+        long chatPeerCount = repository.countDistinctPeersForDate(username, startInclusive, endExclusive);
         return new DailyChatPeerSummary(username, today, chatPeerCount);
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = RedisCacheConfig.ACTIVITY_TODAY, key = "'all'")
     public List<DailyChatPeerSummary> getAllDailyChatPeerSummaries() {
-        LocalDate today = LocalDate.now();
-        return repository.countDistinctPeersForAllUsersOnDate(today).stream()
+        LocalDate today = LocalDate.now(ACTIVITY_ZONE);
+        Instant startInclusive = today.atStartOfDay(ACTIVITY_ZONE).toInstant();
+        Instant endExclusive = startInclusive.plusSeconds(24 * 60 * 60);
+        return repository.countDistinctPeersForAllUsersOnDate(startInclusive, endExclusive).stream()
                 .map(row -> new DailyChatPeerSummary(
                         (String) row[0],
                         today,
@@ -228,6 +234,7 @@ public class ChatMessagingService {
         try {
             restClient.put()
                     .uri(userServiceBaseUrl + "/api/users/{username}/online", username)
+                    .header("X-Username", username)
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {

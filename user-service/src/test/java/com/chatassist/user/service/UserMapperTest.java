@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -20,14 +19,14 @@ class UserMapperTest {
     @BeforeEach
     void setUp() {
         userMapper = new UserMapper();
-        testUser = new AppUser("John", "Doe", "johndoe", "password123", "john@example.com", false);
+        testUser = new AppUser("John", "Doe", "johndoe", "john@example.com", false);
     }
 
     @Test
     @DisplayName("Should map AppUser to AuthResponse correctly")
     void testToAuthResponse() {
         // Act
-        AuthResponse response = userMapper.toAuthResponse(testUser, "Login successful");
+        AuthResponse response = userMapper.toAuthResponse(testUser, "jwt-token-123", "Login successful");
 
         // Assert
         assertThat(response).isNotNull();
@@ -35,6 +34,7 @@ class UserMapperTest {
         assertThat(response.firstName()).isEqualTo("John");
         assertThat(response.lastName()).isEqualTo("Doe");
         assertThat(response.email()).isEqualTo("john@example.com");
+        assertThat(response.token()).isEqualTo("jwt-token-123");
         assertThat(response.message()).isEqualTo("Login successful");
     }
 
@@ -61,7 +61,7 @@ class UserMapperTest {
     @DisplayName("Should preserve user ID in mappings")
     void testIdPreservation() {
         // Act - IDs will be null for new unsaved users
-        AuthResponse authResponse = userMapper.toAuthResponse(testUser, "Test");
+        AuthResponse authResponse = userMapper.toAuthResponse(testUser, "jwt-token-test", "Test");
         UserSummary summary = userMapper.toSummary(testUser);
 
         // Assert - Just verify the fields are mapped consistently
@@ -73,7 +73,7 @@ class UserMapperTest {
     @DisplayName("Should handle bot users in summary")
     void testBotUserSummary() {
         // Arrange
-        AppUser botUser = new AppUser("Bot", "Assistant", "bot", "password", "bot@example.com", true);
+        AppUser botUser = new AppUser("Bot", "Assistant", "bot", "bot@example.com", true);
 
         // Act
         UserSummary summary = userMapper.toSummary(botUser);
@@ -86,10 +86,12 @@ class UserMapperTest {
     @DisplayName("Should handle different auth messages")
     void testDifferentAuthMessages() {
         // Act
-        AuthResponse loginResponse = userMapper.toAuthResponse(testUser, "Login successful");
-        AuthResponse registerResponse = userMapper.toAuthResponse(testUser, "Registration successful");
+        AuthResponse loginResponse = userMapper.toAuthResponse(testUser, "login-token", "Login successful");
+        AuthResponse registerResponse = userMapper.toAuthResponse(testUser, "register-token", "Registration successful");
 
         // Assert
+        assertThat(loginResponse.token()).isEqualTo("login-token");
+        assertThat(registerResponse.token()).isEqualTo("register-token");
         assertThat(loginResponse.message()).isEqualTo("Login successful");
         assertThat(registerResponse.message()).isEqualTo("Registration successful");
     }

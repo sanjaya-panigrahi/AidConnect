@@ -29,7 +29,7 @@ import java.util.Map;
  * Cache names and TTLs
  * ─────────────────────────────────────────────
  * chat:conversations   – 5 min  (message history per user pair)
- * chat:activity:today  – 60 s   (all-user daily peer summaries)
+ * chat:activity:today  – 5 min  (all-user daily peer summaries)
  * ─────────────────────────────────────────────
  * All keys are prefixed with "chat-svc::" to avoid collisions.
  */
@@ -54,7 +54,7 @@ public class RedisCacheConfig implements CachingConfigurer {
 
         Map<String, RedisCacheConfiguration> perCache = Map.of(
                 CONVERSATIONS,  base.entryTtl(Duration.ofMinutes(5)),
-                ACTIVITY_TODAY, base.entryTtl(Duration.ofSeconds(60))
+                ACTIVITY_TODAY, base.entryTtl(Duration.ofMinutes(5))
         );
 
         return RedisCacheManager.builder(redisConnectionFactory)
@@ -92,9 +92,11 @@ public class RedisCacheConfig implements CachingConfigurer {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Use EVERYTHING to include type info for all types including Lists, ensuring
+        // proper deserialization of both single objects and collections from Redis cache
         objectMapper.activateDefaultTypingAsProperty(
                 LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
+                ObjectMapper.DefaultTyping.EVERYTHING,
                 "@class");
 
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);

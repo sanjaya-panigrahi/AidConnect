@@ -137,6 +137,8 @@ class ChatControllerRestDocsTest {
     @Test
     void documentSendMessage() throws Exception {
         mockMvc.perform(post("/api/chats/messages")
+                        .header("X-User-Id", "10")
+                        .header("X-Username", "alex")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -181,6 +183,7 @@ class ChatControllerRestDocsTest {
     @Test
     void documentGetConversation() throws Exception {
         mockMvc.perform(get("/api/chats/conversation")
+                        .header("X-Username", "alex")
                         .param("userA", "alex")
                         .param("userB", "bot"))
                 .andExpect(status().isOk())
@@ -209,6 +212,7 @@ class ChatControllerRestDocsTest {
     @Test
     void documentUpdateStatus() throws Exception {
         mockMvc.perform(patch("/api/chats/messages/status")
+                        .header("X-Username", "alex")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

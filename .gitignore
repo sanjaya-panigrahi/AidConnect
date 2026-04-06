@@ -41,3 +41,6 @@ logs/
 # Frontend build outputs
 **/node_modules/
 **/dist/
+
+doc/
+

@@ -1,71 +1,75 @@
 # Database Initialisation Scripts
 
-This directory contains per-service SQL init scripts for the
-**database per service** architecture.
+This directory contains the first-boot SQL baselines for the services that own MySQL data.
 
 ## Structure
 
-```
+```text
 init-db.sql/
 ├── user-service/
-│   └── 01-schema.sql   ← users, user_activity_log tables
+│   ├── 00-grants.sql
+│   └── 01-schema.sql
 ├── chat-service/
-│   └── 01-schema.sql   ← chat_messages table
+│   └── 01-schema.sql
 ├── aid-service/
-│   └── 01-schema.sql   ← clinic_doctors, doctor_availability,
-│                          appointment_bookings, aid_conversation_state + seeds
+│   └── 01-schema.sql
 └── README.md
 ```
 
-## How it works
+## Ownership
 
-Each service has a **dedicated MySQL container** (`mysql-user`, `mysql-chat`,
-`mysql-aid`) that mounts only its own subdirectory as
-`/docker-entrypoint-initdb.d`. MySQL executes scripts there alphabetically on
-**first boot only** (when the volume is empty).
+| Service | Database | Main tables |
+|---|---|---|
+| `user-service` | `user_service_db` | `users`, `user_credentials`, `user_activity_log`, `auth_audit_log` |
+| `chat-service` | `chat_service_db` | `chat_messages` |
+| `aid-service` | `aid_service_db` | `clinic_doctors`, `doctor_availability`, `appointment_bookings`, `aid_conversation_state` |
 
-| Service       | Container      | Port | Database          | Volume            |
-|---------------|----------------|------|-------------------|-------------------|
-| user-service  | db-user-service| 3307 | `user_service_db` | `mysql_user_data` |
-| chat-service  | db-chat-service| 3308 | `chat_service_db` | `mysql_chat_data` |
-| aid-service   | db-aid-service | 3309 | `aid_service_db`  | `mysql_aid_data`  |
+## How Docker Compose uses these files
 
-## Why separate databases?
+Each MySQL container mounts only its own service folder into `/docker-entrypoint-initdb.d`.
 
-- **Strict data isolation** — no service can accidentally read another's tables
-- **Independent scaling** — each DB can be tuned for its workload
-- **Independent schema evolution** — migrations do not affect other services
-- **Clear ownership** — each team knows exactly which data they own
-- **Easier compliance** — data can be stored in different regions/policies
+The scripts run only on first boot of a fresh volume.
 
-## Adding tables
+Compose defaults currently expose:
 
-Add SQL `CREATE TABLE IF NOT EXISTS` statements to the relevant service script.
-JPA `ddl-auto: update` handles column additions at runtime; the init script
-guarantees correct indexes and seeds on fresh installations.
+| Container | Host port |
+|---|---:|
+| `mysql-user` | 3307 |
+| `mysql-chat` | 3308 |
+| `mysql-aid` | 3309 |
 
-## Local development
+Default DB username in `docker-compose.yml` is `chat_user` unless overridden with environment variables.
 
-Connect directly to each DB from your IDE or CLI:
+## Local connection examples
+
+Use the credentials from your compose environment.
 
 ```bash
-# user-service DB
-mysql -h 127.0.0.1 -P 3307 -u user_svc_user -p user_service_db
-
-# chat-service DB
-mysql -h 127.0.0.1 -P 3308 -u chat_svc_user -p chat_service_db
-
-# aid-service DB
-mysql -h 127.0.0.1 -P 3309 -u aid_svc_user -p aid_service_db
+mysql -h 127.0.0.1 -P 3307 -u chat_user -p user_service_db
+mysql -h 127.0.0.1 -P 3308 -u chat_user -p chat_service_db
+mysql -h 127.0.0.1 -P 3309 -u chat_user -p aid_service_db
 ```
 
-## Resetting a single service DB
+## Resetting a service database
+
+If you want the init scripts to run again, remove the corresponding volume and recreate the container.
+
+Example for `mysql-aid`:
 
 ```bash
-# Stop & remove one service's DB container and volume, then restart
 docker compose stop mysql-aid
 docker compose rm -f mysql-aid
-docker volume rm chat-bot-app_mysql_aid_data
+docker volume ls | grep mysql_aid_data
+# remove the matching volume name from the command above
+docker volume rm <matching_mysql_aid_data_volume>
 docker compose up -d mysql-aid
 ```
 
+## Important note
+
+The repo currently uses both:
+
+- init SQL for fresh environment bootstrapping
+- JPA `ddl-auto: update` for runtime schema evolution
+
+That works for local/dev, but production-grade migrations should eventually move to Flyway or Liquibase.

@@ -74,8 +74,12 @@ eureka:
     healthcheck:
       enabled: true
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:${spring.application.name}}
     instance-id: ${spring.application.name}:${server.port}
+    # Heartbeat every 10 s; lease expires after 30 s → stale entries evict faster
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
 
 management:
   endpoints:

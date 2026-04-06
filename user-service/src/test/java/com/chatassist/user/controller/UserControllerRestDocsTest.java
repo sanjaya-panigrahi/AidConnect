@@ -5,6 +5,7 @@ import com.chatassist.common.dto.AuthResponse;
 import com.chatassist.common.dto.LoginRequest;
 import com.chatassist.common.dto.RegisterUserRequest;
 import com.chatassist.common.dto.UserSummary;
+import com.chatassist.user.service.AuthSessionService;
 import com.chatassist.user.service.UserMapper;
 import com.chatassist.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,12 +50,28 @@ class UserControllerRestDocsTest {
         UserService userService = new UserService(null, new UserMapper(), null) {
             @Override
             public AuthResponse register(RegisterUserRequest request) {
-                return new AuthResponse(501L, request.username(), request.firstName(), request.lastName(), request.email(), "Registration successful");
+                return new AuthResponse(
+                        501L,
+                        request.username(),
+                        request.firstName(),
+                        request.lastName(),
+                        request.email(),
+                        null,
+                        "Registration successful. Please sign in."
+                );
             }
 
             @Override
             public AuthResponse login(LoginRequest request) {
-                return new AuthResponse(501L, request.username(), "Alex", "Turner", "alex@example.com", "Login successful");
+                return new AuthResponse(
+                        501L,
+                        request.username(),
+                        "Alex",
+                        "Turner",
+                        "alex@example.com",
+                        null,
+                        "Login successful"
+                );
             }
 
             @Override
@@ -94,7 +111,7 @@ class UserControllerRestDocsTest {
             }
         };
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService, new AuthSessionService()))
                 .setControllerAdvice(new UserControllerAdvice())
                 .setValidator(validator)
                 .apply(documentationConfiguration(restDocumentation))
@@ -131,6 +148,8 @@ class UserControllerRestDocsTest {
                                 fieldWithPath("firstName").type(JsonFieldType.STRING).description("First name."),
                                 fieldWithPath("lastName").type(JsonFieldType.STRING).description("Last name."),
                                 fieldWithPath("email").type(JsonFieldType.STRING).description("Email."),
+                                fieldWithPath("token").type(JsonFieldType.NULL).description("No token issued on registration; call /login to obtain a JWT Bearer token.")
+                                        .optional(),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("Result message.")
                         )));
     }
@@ -159,6 +178,8 @@ class UserControllerRestDocsTest {
                                 fieldWithPath("firstName").type(JsonFieldType.STRING).description("First name."),
                                 fieldWithPath("lastName").type(JsonFieldType.STRING).description("Last name."),
                                 fieldWithPath("email").type(JsonFieldType.STRING).description("Email."),
+                                fieldWithPath("token").type(JsonFieldType.STRING).description("JWT Bearer token. Use as Authorization: Bearer <token> on subsequent API requests. Null on registration.")
+                                        .optional(),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("Result message.")
                         )));
     }
@@ -166,6 +187,7 @@ class UserControllerRestDocsTest {
     @Test
     void documentListUsers() throws Exception {
         mockMvc.perform(get("/api/users")
+                        .header("X-Username", "alex")
                         .param("excludeUsername", "bot"))
                 .andExpect(status().isOk())
                 .andDo(document("user-list-users",

@@ -9,7 +9,7 @@ import { request } from '../../api/client';
 /**
  * Complete auth screen (login + register).
  * Owns form state, field validation, and API calls.
- * Calls onLoginSuccess(session) on successful auth.
+ * Calls onLoginSuccess(session) on successful sign-in.
  * Calls onGuestAccess() when the guest button is clicked.
  */
 export default function AuthPage({ onLoginSuccess, onGuestAccess }) {
@@ -19,6 +19,7 @@ export default function AuthPage({ onLoginSuccess, onGuestAccess }) {
   const [registerForm, setRegisterForm] = useState(emptyRegister);
   const [registerErrors, setRegisterErrors] = useState({});
   const [error, setError] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState('');
 
   const passwordChecks   = useMemo(() => getPasswordChecks(registerForm.password),   [registerForm.password]);
   const passwordStrength = useMemo(() => getPasswordStrength(registerForm.password), [registerForm.password]);
@@ -26,6 +27,7 @@ export default function AuthPage({ onLoginSuccess, onGuestAccess }) {
   function switchMode(next) {
     setMode(next);
     setError('');
+    setRegisterSuccess('');
     setLoginErrors({});
     setRegisterErrors({});
   }
@@ -33,18 +35,20 @@ export default function AuthPage({ onLoginSuccess, onGuestAccess }) {
   function updateLoginField(field, value) {
     setLoginForm((prev) => ({ ...prev, [field]: value }));
     setError('');
+    setRegisterSuccess('');
     setLoginErrors((prev) => { if (!prev[field]) return prev; const n = { ...prev }; delete n[field]; return n; });
   }
 
   function updateRegisterField(field, value) {
     setRegisterForm((prev) => ({ ...prev, [field]: value }));
     setError('');
+    setRegisterSuccess('');
     setRegisterErrors((prev) => { if (!prev[field]) return prev; const n = { ...prev }; delete n[field]; return n; });
   }
 
   async function handleLogin(event) {
     event.preventDefault();
-    setError(''); setLoginErrors({});
+    setError(''); setRegisterSuccess(''); setLoginErrors({});
     const { payload, errors } = validateLoginValues(loginForm);
     if (Object.keys(errors).length > 0) { setLoginErrors(errors); return; }
     try {
@@ -63,13 +67,13 @@ export default function AuthPage({ onLoginSuccess, onGuestAccess }) {
 
   async function handleRegister(event) {
     event.preventDefault();
-    setError(''); setRegisterErrors({});
+    setError(''); setRegisterSuccess(''); setRegisterErrors({});
     const { payload, errors } = validateRegisterValues(registerForm);
     if (Object.keys(errors).length > 0) { setRegisterErrors(errors); return; }
     try {
       const response = await request(`${userServiceUrl}/api/users/register`, { method: 'POST', body: JSON.stringify(payload) });
       setRegisterForm(emptyRegister); setRegisterErrors({});
-      onLoginSuccess(response);
+      setRegisterSuccess(response?.message || 'Registration successful. Please sign in.');
     } catch (err) {
       if (Object.keys(err.fieldErrors || {}).length > 0) {
         setRegisterErrors(err.fieldErrors);
@@ -112,6 +116,15 @@ export default function AuthPage({ onLoginSuccess, onGuestAccess }) {
                 <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               {error}
+            </div>
+          )}
+
+          {mode === 'register' && registerSuccess && (
+            <div className="success-banner">
+              <span>{registerSuccess}</span>
+              <button type="button" className="success-banner-action" onClick={() => switchMode('login')}>
+                Go to Sign in
+              </button>
             </div>
           )}
 

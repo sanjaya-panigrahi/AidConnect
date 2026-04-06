@@ -126,6 +126,7 @@ class ChatControllerValidationTest {
         mockMvc = buildMockMvc(notFoundService);
 
         mockMvc.perform(patch("/api/chats/messages/status")
+                        .header("X-Username", "alex")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

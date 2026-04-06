@@ -1,13 +1,11 @@
 // ─── Service endpoint URLs (override via .env) ───────────────────────────────
-export const userServiceUrl = import.meta.env.VITE_USER_SERVICE_URL || 'http://localhost:8081';
-export const chatServiceUrl = import.meta.env.VITE_CHAT_SERVICE_URL || 'http://localhost:8082';
-export const chatWsUrl = import.meta.env.VITE_CHAT_WS_URL || `${chatServiceUrl}/ws-chat`;
+export const userServiceUrl = import.meta.env.VITE_USER_SERVICE_URL || '';
+export const chatServiceUrl = import.meta.env.VITE_CHAT_SERVICE_URL || '';
+export const chatWsUrl = import.meta.env.VITE_CHAT_WS_URL || '/ws-chat';
 
 // ─── Assets ───────────────────────────────────────────────────────────────────
 export const defaultUserAvatar = '/default-user.svg';
 
-// ─── Session storage ──────────────────────────────────────────────────────────
-export const SESSION_STORAGE_KEY = 'chat-session';
 export const GUEST_USERNAME_PREFIX = 'guest-';
 
 // ─── Display limits ───────────────────────────────────────────────────────────

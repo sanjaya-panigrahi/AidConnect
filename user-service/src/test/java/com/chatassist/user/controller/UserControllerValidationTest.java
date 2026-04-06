@@ -3,6 +3,7 @@ package com.chatassist.user.controller;
 import com.chatassist.common.dto.AuthResponse;
 import com.chatassist.common.dto.LoginRequest;
 import com.chatassist.common.dto.RegisterUserRequest;
+import com.chatassist.user.service.AuthSessionService;
 import com.chatassist.user.service.UserMapper;
 import com.chatassist.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +46,7 @@ class UserControllerValidationTest {
     }
 
     private MockMvc buildMockMvc(UserService userService) {
-        return MockMvcBuilders.standaloneSetup(new UserController(userService))
+        return MockMvcBuilders.standaloneSetup(new UserController(userService, new AuthSessionService()))
                 .setControllerAdvice(new UserControllerAdvice())
                 .setValidator(validator)
                 .build();

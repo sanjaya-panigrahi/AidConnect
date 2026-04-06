@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: bot-service-test
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  cache:
+    type: redis
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: bot-service-test
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.chatassist.common.dto
+        spring.json.value.default.type: com.chatassist.common.dto.ChatMessageEvent
+    listener:
+      auto-startup: false
+
+  ai:
+    openai:
+      api-key: test-key-for-integration-tests
+      chat:
+        options:
+          model: gpt-4o-mini
+
+chatassist:
+  discovery:
+    enabled: false
+
+services:
+  user-service:
+    base-url: http://localhost:8081
+  chat-service:
+    base-url: http://localhost:8082
+
+logging:
+  level:
+    root: WARN
+    com.chatassist: DEBUG
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
+    org.springframework.ai: WARN
+

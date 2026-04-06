@@ -22,9 +22,9 @@ import java.util.Map;
  *
  * Cache names and TTLs
  * ─────────────────────────────────────────────
- * aid:doctors          – 1 h   (active doctor registry — rarely changes)
+ * aid:doctors          – 5 min (active doctor registry)
  * aid:doctor:slots     – 5 min (available slots per doctorId)
- * aid:doctor:by-id     – 1 h   (single doctor entity by id)
+ * aid:doctor:by-id     – 5 min (single doctor entity by id)
  * ─────────────────────────────────────────────
  * All keys are prefixed with "aid-svc::" to avoid collisions.
  */
@@ -42,13 +42,13 @@ public class RedisCacheConfig {
         RedisCacheConfiguration base = defaultConfig();
 
         Map<String, RedisCacheConfiguration> perCache = Map.of(
-            AID_DOCTORS,      base.entryTtl(Duration.ofHours(1)),
+            AID_DOCTORS,      base.entryTtl(Duration.ofMinutes(5)),
             AID_DOCTOR_SLOTS, base.entryTtl(Duration.ofMinutes(5)),
-            AID_DOCTOR_BY_ID, base.entryTtl(Duration.ofHours(1))
+            AID_DOCTOR_BY_ID, base.entryTtl(Duration.ofMinutes(5))
         );
 
         return RedisCacheManager.builder(cf)
-                .cacheDefaults(base.entryTtl(Duration.ofMinutes(10)))
+                .cacheDefaults(base.entryTtl(Duration.ofMinutes(5)))
                 .withInitialCacheConfigurations(perCache)
                 .build();
     }
@@ -57,9 +57,11 @@ public class RedisCacheConfig {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Use EVERYTHING to include type info for all types including Lists, ensuring
+        // proper deserialization of both single objects and collections from Redis cache
         objectMapper.activateDefaultTypingAsProperty(
                 LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
+                ObjectMapper.DefaultTyping.EVERYTHING,
                 "@class");
 
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);

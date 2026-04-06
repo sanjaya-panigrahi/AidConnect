@@ -13,7 +13,7 @@ import java.time.Duration;
  *
  * Cache keys and TTLs
  * ─────────────────────────────────────
- * bot-svc:history:{username}  – 60 min sliding  (conversation window per user)
+ * bot-svc:history:{username}  – 5 min sliding  (conversation window per user)
  * ─────────────────────────────────────
  */
 @Configuration
@@ -24,7 +24,7 @@ public class RedisCacheConfig {
     public static final String HISTORY_KEY_PREFIX = "bot-svc:history:";
 
     /** How long a user's history survives without activity. */
-    public static final Duration HISTORY_TTL = Duration.ofMinutes(60);
+    public static final Duration HISTORY_TTL = Duration.ofMinutes(5);
 
     @Bean
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory cf) {

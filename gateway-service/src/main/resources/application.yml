@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: gateway-service
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2000ms
+  session:
+    store-type: redis
+    timeout: 5m
+    redis:
+      namespace: chatassist:session
   cloud:
     gateway:
       # Global CORS policy for REST API routes.
@@ -41,6 +51,15 @@ spring:
             - Path=/api/chats/**
           filters:
             - RewritePath=/api/chats(?<segment>/?.*), /api/chats$\{segment}
+            - name: Retry
+              args:
+                retries: 2
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
+                methods: GET
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
+                  factor: 2
 
         # Chat Service WebSocket routes
         - id: chat-websocket
@@ -49,6 +68,15 @@ spring:
             - Path=/ws-chat/**
           filters:
             - RewritePath=/ws-chat(?<segment>/?.*), /ws-chat$\{segment}
+            - name: Retry
+              args:
+                retries: 2
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
+                methods: GET
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
+                  factor: 2
 
         # Bot Service routes
         - id: bot-service
@@ -76,6 +104,9 @@ spring:
 
 # Allow dynamic discovery toggle for local dev
 chatassist:
+  auth:
+    force-relogin-enabled: ${CHATASSIST_AUTH_FORCE_RELOGIN_ENABLED:true}
+    absolute-timeout-ms: ${CHATASSIST_AUTH_ABSOLUTE_TIMEOUT_MS:300000}
   discovery:
     enabled: ${CHATASSIST_DISCOVERY_ENABLED:true}
 
@@ -89,8 +120,11 @@ eureka:
     healthcheck:
       enabled: true
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:${spring.application.name}}
     instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
 
 management:
   endpoints:
