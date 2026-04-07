@@ -12,8 +12,6 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -60,9 +58,13 @@ public class AppointmentAssistantService {
             Rules:
             - Use ONLY the clinic data provided below. Never invent doctors, specialties, dates, or slot IDs.
             - Keep replies short and conversational.
-            - When the user wants to book an appointment, pick the best matching slot from the data,
-              describe it clearly (doctor name, specialty, date and time), and ask the user to confirm.
-            - If you are proposing a booking, call the tool named proposeBooking with numeric doctorId and slotId.
+            - CRITICAL INSTRUCTION: When the user asks to book an appointment, requests a slot, mentions a symptom/condition,
+              or expresses any intent to schedule a visit, you MUST:
+              1. Analyze the clinic data to find the best-matching doctor based on specialty/symptoms
+              2. Select the earliest available slot for that doctor
+              3. Call the proposeBooking tool with the correct numeric doctorId and slotId
+              4. In your response, describe the proposed slot (doctor name, specialty, date and time) and ask for confirmation.
+            - After calling proposeBooking, do NOT repeat the tool call. Simply ask the user to confirm with "yes" or "no".
             - Do not include [PROPOSE:...] markers in user-visible text.
             - IMPORTANT: Maintain conversation context and flow. Remember what the user has said before
               and what you have replied. Do NOT reset or restart the conversation unless the user explicitly
@@ -104,7 +106,8 @@ public class AppointmentAssistantService {
         // Global reset
         if (message.isBlank()
                 || "reset".equalsIgnoreCase(message)
-                || "start".equalsIgnoreCase(message)) {
+                || "start over".equalsIgnoreCase(message)
+                || "restart".equalsIgnoreCase(message)) {
             state.resetToGreeting();
             stateRepository.save(state);
             return greet();
@@ -115,6 +118,11 @@ public class AppointmentAssistantService {
                 && state.getDoctorId() != null
                 && state.getProposedSlot() != null) {
             return handleConfirmation(state, message);
+        }
+
+        // Simple greeting in CHATTING should not reset conversation state.
+        if (isGreetingIntent(message)) {
+            return greet();
         }
 
         // Default: conversational LLM with live DB context
@@ -190,11 +198,6 @@ public class AppointmentAssistantService {
                 return raw.strip();
             }
 
-            if (isLikelyBookingIntent(message)) {
-                log.info("Booking intent detected without tool proposal for user '{}'; requesting clearer preferences", state.getUsername());
-                return "I can help book this appointment. Please share your preferred doctor or specialty and a preferred date/time window, and I will propose an available slot for confirmation.";
-            }
-
 
             return raw.strip();
 
@@ -203,6 +206,7 @@ public class AppointmentAssistantService {
             return fallback();
         }
     }
+
 
     private void applyProposal(AidConversationState state, long doctorId, long slotId) {
         Doctor doctor = doctorCacheService.findDoctorById(doctorId).orElse(null);
@@ -300,18 +304,13 @@ public class AppointmentAssistantService {
         return t.equals("no") || t.equals("n") || t.equals("cancel") || t.equals("nope");
     }
 
-    private boolean isLikelyBookingIntent(String s) {
-        String t = s == null ? "" : s.toLowerCase(Locale.ROOT).trim();
-        if (t.isEmpty()) {
-            return false;
-        }
-        return t.contains("book")
-                || t.contains("appointment")
-                || t.contains("schedule")
-                || t.contains("slot")
-                || t.contains("available")
-                || t.contains("doctor");
+    private boolean isGreetingIntent(String s) {
+        String normalized = s == null ? "" : s.toLowerCase(Locale.ROOT).trim()
+                .replaceAll("[!?,;]$", "");  // Strip trailing punctuation
+        return normalized.equals("hi") || normalized.equals("hello") 
+               || normalized.startsWith("hi ") || normalized.startsWith("hello ");
     }
+
 
     private String greet() {
         return "👋 Hello! I'm the Hinjawadi Mega Clinic appointment assistant. "
@@ -324,30 +323,4 @@ public class AppointmentAssistantService {
                 + "Please try again or contact the clinic directly.";
     }
 
-    static final class BookingProposalTool {
-        private static final Logger log = LoggerFactory.getLogger(BookingProposalTool.class);
-        private Long doctorId;
-        private Long slotId;
-
-        @Tool(name = "proposeBooking", description = "Propose a clinic booking candidate using doctorId and slotId.")
-        public String proposeBooking(@ToolParam(description = "Doctor ID from clinic data") Long doctorId,
-                                     @ToolParam(description = "Slot ID from clinic data") Long slotId) {
-            this.doctorId = doctorId;
-            this.slotId = slotId;
-            log.info("Tool proposeBooking invoked with doctorId={}, slotId={}", doctorId, slotId);
-            return "Proposal captured. Ask the user to confirm with yes/no.";
-        }
-
-        boolean hasProposal() {
-            return doctorId != null && slotId != null;
-        }
-
-        Long getDoctorId() {
-            return doctorId;
-        }
-
-        Long getSlotId() {
-            return slotId;
-        }
-    }
 }
