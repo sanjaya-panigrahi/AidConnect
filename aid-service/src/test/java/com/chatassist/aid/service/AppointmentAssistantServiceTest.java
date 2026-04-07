@@ -62,7 +62,7 @@ class AppointmentAssistantServiceTest {
         alreadyBooked = false;
 
         serviceNoLlm   = build(/* llm stub */ null);
-        serviceWithLlm = build(buildFakeChatClient("Great choice! I suggest Dr. Smith on Apr 5 at 10:00 AM.\n[PROPOSE:1:101]"));
+        serviceWithLlm = build(buildFakeChatClient("Great choice! I suggest Dr. Smith on Apr 5 at 10:00 AM."));
     }
 
     // ── 1. Greeting on blank / reset ─────────────────────────────────────────
@@ -152,10 +152,10 @@ class AppointmentAssistantServiceTest {
         assertThat(ctx).contains("Slot ID: 101");
     }
 
-    // ── 7. LLM propose marker is stripped from user-visible reply ─────────────
+    // ── 7. Tool-based proposal keeps user-visible reply clean ─────────────────
 
     @Test
-    void proposeMarkerIsStrippedFromLlmResponse() {
+    void toolBasedProposalKeepsReplyClean() {
         String reply = serviceWithLlm.respond("eve", "book me a slot with Dr. Smith");
 
         assertThat(reply).doesNotContain("[PROPOSE:");
@@ -282,9 +282,34 @@ class AppointmentAssistantServiceTest {
                 new Class[]{ChatClient.ChatClientRequestSpec.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "system", "user" -> proxy;
+                    case "tools" -> {
+                        maybeInvokeTool(args);
+                        yield proxy;
+                    }
                     case "call"           -> buildCallProxy(reply);
                     default               -> defaultValue(method.getReturnType());
                 });
+    }
+
+    /** Invokes proposeBooking on the passed tool object if present. */
+    private void maybeInvokeTool(Object[] args) {
+        if (args == null || args.length == 0 || args[0] == null) {
+            return;
+        }
+        Object toolCandidate = args[0];
+        if (toolCandidate instanceof Object[] arr && arr.length > 0) {
+            toolCandidate = arr[0];
+        }
+        if (toolCandidate == null) {
+            return;
+        }
+        try {
+            var method = toolCandidate.getClass().getDeclaredMethod("proposeBooking", Long.class, Long.class);
+            method.setAccessible(true);
+            method.invoke(toolCandidate, DOCTOR_ID, SLOT_ID);
+        } catch (ReflectiveOperationException ignored) {
+            // Non-tool calls in this proxy are fine to ignore.
+        }
     }
 
     private Object buildCallProxy(String reply) {

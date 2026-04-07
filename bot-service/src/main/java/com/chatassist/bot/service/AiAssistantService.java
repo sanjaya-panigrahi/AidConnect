@@ -1,10 +1,14 @@
 package com.chatassist.bot.service;
 
 import com.chatassist.common.dto.ChatMessageResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -30,11 +34,26 @@ public class AiAssistantService {
                 ? prompt
                 : "Conversation so far:\n" + historyContext + "\n\nLatest user message:\n" + prompt;
 
+        BotUtilityTool tool = new BotUtilityTool();
+
         return chatClient.prompt()
-                .system("You are a concise one-to-one chat assistant inside a customer messaging app. Keep answers short, helpful, and conversational.")
+                .system("You are a concise one-to-one chat assistant inside a customer messaging app. Keep answers short, helpful, and conversational. "
+                        + "If the user asks for current date/time, call the getCurrentUtcTime tool.")
+                .tools(tool)
                 .user(userPrompt)
                 .call()
                 .content();
+    }
+
+    static final class BotUtilityTool {
+        private static final Logger log = LoggerFactory.getLogger(BotUtilityTool.class);
+
+        @Tool(name = "getCurrentUtcTime", description = "Returns current time in UTC ISO-8601 format")
+        public String getCurrentUtcTime() {
+            String now = OffsetDateTime.now(java.time.ZoneOffset.UTC).toString();
+            log.info("Tool getCurrentUtcTime invoked");
+            return now;
+        }
     }
 
     private String buildHistoryContext(List<ChatMessageResponse> history) {

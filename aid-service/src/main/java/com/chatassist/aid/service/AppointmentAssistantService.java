@@ -12,6 +12,8 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -19,8 +21,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Conversational appointment assistant powered by an LLM.
@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  * <pre>
  *  CHATTING  ─── user asks anything ──► LLM answers using live DB context
  *                                        │
- *                         LLM proposes  [PROPOSE:doctorId:slotId]
+ *                         LLM calls tool proposeBooking(doctorId, slotId)
  *                                        │
  *            ◄── store proposal ─────────┘
  *  CONFIRMING ── "yes" ──► book in DB ──► reset to CHATTING
@@ -51,13 +51,6 @@ public class AppointmentAssistantService {
     static final String STAGE_CHATTING   = "CHATTING";
     static final String STAGE_CONFIRMING = "CONFIRMING";
 
-    /**
-     * Marker the LLM appends when it proposes a specific booking.
-     * Pattern: {@code [PROPOSE:doctorId:slotId]}
-     */
-    private static final Pattern PROPOSE_PATTERN =
-            Pattern.compile("\\[PROPOSE:(\\d+):(\\d+)]", Pattern.CASE_INSENSITIVE);
-
     private static final DateTimeFormatter DISPLAY_DT =
             DateTimeFormatter.ofPattern("EEE, MMM d 'at' h:mm a", Locale.ENGLISH);
 
@@ -69,10 +62,8 @@ public class AppointmentAssistantService {
             - Keep replies short and conversational.
             - When the user wants to book an appointment, pick the best matching slot from the data,
               describe it clearly (doctor name, specialty, date and time), and ask the user to confirm.
-            - At the very end of that message, on its own line, append exactly:
-                [PROPOSE:doctorId:slotId]
-              using the numeric IDs from the clinic data.
-            - If you are NOT proposing a booking, do NOT include [PROPOSE:...] anywhere.
+            - If you are proposing a booking, call the tool named proposeBooking with numeric doctorId and slotId.
+            - Do not include [PROPOSE:...] markers in user-visible text.
             - IMPORTANT: Maintain conversation context and flow. Remember what the user has said before
               and what you have replied. Do NOT reset or restart the conversation unless the user explicitly
               says "reset", "start over", or similar.
@@ -179,11 +170,13 @@ public class AppointmentAssistantService {
 
         String dbContext = buildDbContext();
         String conversationHistory = buildConversationHistory(state.getUsername());
+        BookingProposalTool proposalTool = new BookingProposalTool();
 
         try {
             String raw = chatClient.prompt()
                     .system(SYSTEM_PROMPT + "\n\nClinic data:\n" + dbContext 
                             + (conversationHistory.isEmpty() ? "" : "\n\nPrevious conversation:\n" + conversationHistory))
+                    .tools(proposalTool)
                     .user(message)
                     .call()
                     .content();
@@ -192,31 +185,34 @@ public class AppointmentAssistantService {
                 return fallback();
             }
 
-            // Detect booking proposal marker from LLM
-            Matcher m = PROPOSE_PATTERN.matcher(raw);
-            if (m.find()) {
-                long doctorId = Long.parseLong(m.group(1));
-                long slotId   = Long.parseLong(m.group(2));
-
-                Doctor          doctor = doctorCacheService.findDoctorById(doctorId).orElse(null);
-                DoctorAvailability slot = doctorCacheService.findSlotById(slotId).orElse(null);
-
-                if (doctor != null && slot != null && slot.isEnabled()) {
-                    state.setStage(STAGE_CONFIRMING);
-                    state.setDoctorId(doctorId);
-                    state.setProposedSlot(slot.getAvailableAt());
-                    stateRepository.save(state);
-                }
-
-                // Strip the marker before returning to the user
-                return m.replaceAll("").strip();
+            if (proposalTool.hasProposal()) {
+                applyProposal(state, proposalTool.getDoctorId(), proposalTool.getSlotId());
+                return raw.strip();
             }
+
+            if (isLikelyBookingIntent(message)) {
+                log.info("Booking intent detected without tool proposal for user '{}'; requesting clearer preferences", state.getUsername());
+                return "I can help book this appointment. Please share your preferred doctor or specialty and a preferred date/time window, and I will propose an available slot for confirmation.";
+            }
+
 
             return raw.strip();
 
         } catch (Exception ex) {
             log.warn("LLM call failed in aid-service: {}", ex.getMessage());
             return fallback();
+        }
+    }
+
+    private void applyProposal(AidConversationState state, long doctorId, long slotId) {
+        Doctor doctor = doctorCacheService.findDoctorById(doctorId).orElse(null);
+        DoctorAvailability slot = doctorCacheService.findSlotById(slotId).orElse(null);
+
+        if (doctor != null && slot != null && slot.isEnabled()) {
+            state.setStage(STAGE_CONFIRMING);
+            state.setDoctorId(doctorId);
+            state.setProposedSlot(slot.getAvailableAt());
+            stateRepository.save(state);
         }
     }
 
@@ -304,6 +300,19 @@ public class AppointmentAssistantService {
         return t.equals("no") || t.equals("n") || t.equals("cancel") || t.equals("nope");
     }
 
+    private boolean isLikelyBookingIntent(String s) {
+        String t = s == null ? "" : s.toLowerCase(Locale.ROOT).trim();
+        if (t.isEmpty()) {
+            return false;
+        }
+        return t.contains("book")
+                || t.contains("appointment")
+                || t.contains("schedule")
+                || t.contains("slot")
+                || t.contains("available")
+                || t.contains("doctor");
+    }
+
     private String greet() {
         return "👋 Hello! I'm the Hinjawadi Mega Clinic appointment assistant. "
                 + "Ask me anything about our doctors or available slots, "
@@ -313,5 +322,32 @@ public class AppointmentAssistantService {
     private String fallback() {
         return "I'm having trouble responding right now. "
                 + "Please try again or contact the clinic directly.";
+    }
+
+    static final class BookingProposalTool {
+        private static final Logger log = LoggerFactory.getLogger(BookingProposalTool.class);
+        private Long doctorId;
+        private Long slotId;
+
+        @Tool(name = "proposeBooking", description = "Propose a clinic booking candidate using doctorId and slotId.")
+        public String proposeBooking(@ToolParam(description = "Doctor ID from clinic data") Long doctorId,
+                                     @ToolParam(description = "Slot ID from clinic data") Long slotId) {
+            this.doctorId = doctorId;
+            this.slotId = slotId;
+            log.info("Tool proposeBooking invoked with doctorId={}, slotId={}", doctorId, slotId);
+            return "Proposal captured. Ask the user to confirm with yes/no.";
+        }
+
+        boolean hasProposal() {
+            return doctorId != null && slotId != null;
+        }
+
+        Long getDoctorId() {
+            return doctorId;
+        }
+
+        Long getSlotId() {
+            return slotId;
+        }
     }
 }

@@ -30,7 +30,7 @@ spring:
       api-key: ${OPENAI_API_KEY:${OPENAI_API_KEY_SECRET:}}
       chat:
         options:
-          model: gpt-4o-mini
+          model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
