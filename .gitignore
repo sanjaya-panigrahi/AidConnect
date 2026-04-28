@@ -45,4 +45,6 @@ logs/
 doc/
 
 *.md
+POST/
+examples/
 

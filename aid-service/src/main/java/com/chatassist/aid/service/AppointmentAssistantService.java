@@ -58,14 +58,6 @@ public class AppointmentAssistantService {
             Rules:
             - Use ONLY the clinic data provided below. Never invent doctors, specialties, dates, or slot IDs.
             - Keep replies short and conversational.
-            - CRITICAL INSTRUCTION: When the user asks to book an appointment, requests a slot, mentions a symptom/condition,
-              or expresses any intent to schedule a visit, you MUST:
-              1. Analyze the clinic data to find the best-matching doctor based on specialty/symptoms
-              2. Select the earliest available slot for that doctor
-              3. Call the proposeBooking tool with the correct numeric doctorId and slotId
-              4. In your response, describe the proposed slot (doctor name, specialty, date and time) and ask for confirmation.
-            - After calling proposeBooking, do NOT repeat the tool call. Simply ask the user to confirm with "yes" or "no".
-            - Do not include [PROPOSE:...] markers in user-visible text.
             - IMPORTANT: Maintain conversation context and flow. Remember what the user has said before
               and what you have replied. Do NOT reset or restart the conversation unless the user explicitly
               says "reset", "start over", or similar.

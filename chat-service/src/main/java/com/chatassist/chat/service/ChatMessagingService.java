@@ -26,16 +26,24 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 @Service
 public class ChatMessagingService {
     private static final Logger logger = Logger.getLogger(ChatMessagingService.class.getName());
     private static final String GUEST_USERNAME_PREFIX = "guest-";
+        private static final String SUPPORT_ADMIN_PREFIX = "aid-admin-";
+        private static final Pattern BOOKING_INTENT_PATTERN = Pattern.compile(
+            "\\b(book|booking|appointment|schedule|reschedule|slot|doctor|clinic)\\b",
+            Pattern.CASE_INSENSITIVE);
     private static final ZoneOffset ACTIVITY_ZONE = ZoneOffset.UTC;
 
     private final ChatMessageRepository repository;
@@ -44,6 +52,9 @@ public class ChatMessagingService {
     private final WebSocketNotifier webSocketNotifier;
     private final RestClient restClient;
     private final String userServiceBaseUrl;
+    private final ZoneId supportAdminTimeZone;
+    private final LocalTime supportAdminStart;
+    private final LocalTime supportAdminEnd;
 
     // Field-injected so existing constructors don't need changing.
     @Autowired(required = false)
@@ -53,7 +64,8 @@ public class ChatMessagingService {
                                 ChatEventPublisher eventPublisher, WebSocketNotifier webSocketNotifier,
                                 RestClient restClient) {
         this(repository, mapper, eventPublisher, webSocketNotifier, restClient,
-                RestClient.builder(), false, "http://localhost:8081");
+            RestClient.builder(), false, "http://localhost:8081",
+            "Asia/Kolkata", "09:00", "17:00");
     }
 
     @Autowired
@@ -62,13 +74,19 @@ public class ChatMessagingService {
                                 RestClient restClient,
                                 @LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
                                 @Value("${chatassist.discovery.enabled:true}") boolean discoveryEnabled,
-                                @Value("${services.user-service.base-url}") String userServiceBaseUrl) {
+                                @Value("${services.user-service.base-url}") String userServiceBaseUrl,
+                                @Value("${chatassist.support-admin.timezone:Asia/Kolkata}") String supportAdminTimezone,
+                                @Value("${chatassist.support-admin.start:09:00}") String supportAdminStart,
+                                @Value("${chatassist.support-admin.end:17:00}") String supportAdminEnd) {
         this.repository = repository;
         this.mapper = mapper;
         this.eventPublisher = eventPublisher;
         this.webSocketNotifier = webSocketNotifier;
         this.restClient = discoveryEnabled ? loadBalancedRestClientBuilder.build() : restClient;
         this.userServiceBaseUrl = discoveryEnabled ? "http://user-service" : userServiceBaseUrl;
+        this.supportAdminTimeZone = ZoneId.of(supportAdminTimezone);
+        this.supportAdminStart = LocalTime.parse(supportAdminStart);
+        this.supportAdminEnd = LocalTime.parse(supportAdminEnd);
     }
 
     /**
@@ -112,6 +130,22 @@ public class ChatMessagingService {
             targetReceiverId = aid.id();
             targetReceiverUsername = aid.username();
             targetMessageType = MessageType.BOT;
+        }
+
+        // Booking requests should go only via @aid, not via human support-admin chats.
+        if (isSupportAdmin(targetReceiverUsername)
+                && !hasAidMention
+                && containsBookingIntent(request.content())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Booking requests must be sent via @aid only. Please mention @aid in your message.");
+        }
+
+        // Human support admins are available only during configured business hours.
+        if (isSupportAdmin(targetReceiverUsername) && !isWithinSupportAdminHours()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Support admins are available from 09:00 to 17:00. For booking help, please use @aid.");
         }
 
         Instant now = Instant.now();
@@ -252,6 +286,19 @@ public class ChatMessagingService {
 
     private boolean isGuestUsername(String username) {
         return username != null && username.toLowerCase(Locale.ROOT).startsWith(GUEST_USERNAME_PREFIX);
+    }
+
+    private boolean isSupportAdmin(String username) {
+        return username != null && username.toLowerCase(Locale.ROOT).startsWith(SUPPORT_ADMIN_PREFIX);
+    }
+
+    private boolean containsBookingIntent(String content) {
+        return content != null && BOOKING_INTENT_PATTERN.matcher(content).find();
+    }
+
+    private boolean isWithinSupportAdminHours() {
+        LocalTime now = ZonedDateTime.now(supportAdminTimeZone).toLocalTime();
+        return !now.isBefore(supportAdminStart) && now.isBefore(supportAdminEnd);
     }
 }
 

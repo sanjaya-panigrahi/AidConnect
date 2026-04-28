@@ -55,6 +55,11 @@ spring:
 chatassist:
   discovery:
     enabled: ${CHATASSIST_DISCOVERY_ENABLED:true}
+  support-admin:
+    seed:
+      enabled: ${CHATASSIST_SUPPORT_ADMIN_SEED_ENABLED:true}
+      default-password: ${CHATASSIST_SUPPORT_ADMIN_DEFAULT_PASSWORD:AidAdmin@123}
+      include-third: ${CHATASSIST_SUPPORT_ADMIN_INCLUDE_THIRD:false}
 
 eureka:
   client:

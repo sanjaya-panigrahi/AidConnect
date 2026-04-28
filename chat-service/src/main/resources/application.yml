@@ -59,6 +59,10 @@ spring:
 chatassist:
   discovery:
     enabled: ${CHATASSIST_DISCOVERY_ENABLED:true}
+  support-admin:
+    timezone: ${CHATASSIST_SUPPORT_ADMIN_TIMEZONE:Asia/Kolkata}
+    start: ${CHATASSIST_SUPPORT_ADMIN_START:09:00}
+    end: ${CHATASSIST_SUPPORT_ADMIN_END:17:00}
 
 services:
   user-service:

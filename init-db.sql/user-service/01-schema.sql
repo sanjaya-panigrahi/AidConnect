@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_name   VARCHAR(255)  NOT NULL,
     username    VARCHAR(255)  NOT NULL,
     email       VARCHAR(255)  NOT NULL,
-    bot         BIT(1)        NOT NULL DEFAULT 0,
+    assistant   BIT(1)        NOT NULL DEFAULT 0,
     online      BIT(1)        NOT NULL DEFAULT 0,
     last_active DATETIME(6)   NULL,
     PRIMARY KEY (id),

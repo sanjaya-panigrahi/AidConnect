@@ -28,7 +28,7 @@ public class AppUser {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "assistant", nullable = false)
     private boolean bot;
 
     @Column(nullable = false, columnDefinition = "BIT(1) DEFAULT 0")
