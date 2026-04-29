@@ -4,14 +4,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.chatassist</groupId>
-        <artifactId>chat-assist-app</artifactId>
+        <groupId>com.aidconnect</groupId>
+        <artifactId>aidconnect</artifactId>
         <version>1.0.0</version>
     </parent>
 
     <artifactId>discovery-service</artifactId>
     <name>discovery-service</name>
-    <description>Service registry for Chat Assist microservices</description>
+    <description>Service registry for AidConnect microservices</description>
 
     <dependencies>
         <dependency>

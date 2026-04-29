@@ -22,10 +22,10 @@ public class OpenApiConfig {
     public OpenAPI botServiceOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Chat Assist - Bot Service API")
+                        .title("AidConnect - Bot Service API")
                         .description("Kafka-based bot assistance service for AI-powered chat responses.")
                         .version("v1")
-                        .contact(new Contact().name("Chat Assist Team")))
+                        .contact(new Contact().name("AidConnect Team")))
                 .servers(List.of(new Server().url("/").description("Current environment")));
     }
 }

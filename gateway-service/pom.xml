@@ -4,14 +4,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.chatassist</groupId>
-        <artifactId>chat-assist-app</artifactId>
+        <groupId>com.aidconnect</groupId>
+        <artifactId>aidconnect</artifactId>
         <version>1.0.0</version>
     </parent>
 
     <artifactId>gateway-service</artifactId>
     <name>gateway-service</name>
-    <description>API Gateway for Chat Assist microservices</description>
+    <description>API Gateway for AidConnect microservices</description>
 
     <dependencies>
         <dependency>

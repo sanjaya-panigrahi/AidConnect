@@ -1,4 +1,4 @@
-name: chat-assist-app
+name: aidconnect
 
 services:
 
@@ -89,7 +89,7 @@ services:
   # ── Cache layer ─────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: redis-chat-assist-app
+    container_name: redis-aidconnect
     ports:
       - "6379:6379"
     command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
@@ -102,7 +102,7 @@ services:
   # ── Message broker ──────────────────────────────────────────────────────────
   kafka:
     image: confluentinc/cp-kafka:7.6.0
-    container_name: kafka-chat-assist-app
+    container_name: kafka-aidconnect
     ports:
       - "9092:9092"
     environment:
@@ -130,7 +130,7 @@ services:
 
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
-    container_name: kafdrop-chat-assist-app
+    container_name: kafdrop-aidconnect
     ports:
       - "9000:9000"
     environment:
@@ -148,7 +148,7 @@ services:
       dockerfile: Dockerfile.backend
       args:
         SERVICE_MODULE: discovery-service
-    container_name: discovery-service-chat-assist
+    container_name: discovery-service-aidconnect
     environment:
       EUREKA_INSTANCE_HOSTNAME: discovery-service
       LOG_DIR: /app/logs
@@ -171,11 +171,11 @@ services:
       dockerfile: Dockerfile.backend
       args:
         SERVICE_MODULE: user-service
-    container_name: user-service-chat-assist
+    container_name: user-service-aidconnect
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user:3306/${USER_DB_NAME:-user_service_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${USER_DB_USER:-chat_user}
-      JWT_SECRET: ${JWT_SECRET:-chat-assist-jwt-secret-key-min-32-chars-required-by-hs256}
+      JWT_SECRET: ${JWT_SECRET:-aidconnect-jwt-secret-key-min-32-chars-required-by-hs256}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-300000}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
@@ -203,11 +203,11 @@ services:
       dockerfile: Dockerfile.backend
       args:
         SERVICE_MODULE: chat-service
-    container_name: chat-service-chat-assist
+    container_name: chat-service-aidconnect
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-chat:3306/${CHAT_DB_NAME:-chat_service_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${CHAT_DB_USER:-chat_user}
-      JWT_SECRET: ${JWT_SECRET:-chat-assist-jwt-secret-key-min-32-chars-required-by-hs256}
+      JWT_SECRET: ${JWT_SECRET:-aidconnect-jwt-secret-key-min-32-chars-required-by-hs256}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_DATA_REDIS_HOST: redis
@@ -238,7 +238,7 @@ services:
       dockerfile: Dockerfile.backend
       args:
         SERVICE_MODULE: bot-service
-    container_name: bot-service-chat-assist
+    container_name: bot-service-aidconnect
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_DATA_REDIS_HOST: redis
@@ -274,7 +274,7 @@ services:
       dockerfile: Dockerfile.backend
       args:
         SERVICE_MODULE: aid-service
-    container_name: aid-service-chat-assist
+    container_name: aid-service-aidconnect
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-aid:3306/${AID_DB_NAME:-aid_service_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${AID_DB_USER:-chat_user}
@@ -308,7 +308,7 @@ services:
       redis:
         condition: service_healthy
 
-  chat-assist-ui:
+  aidconnect-ui:
     build:
       context: chat-assist-ui
       dockerfile: Dockerfile
@@ -316,7 +316,7 @@ services:
         VITE_USER_SERVICE_URL: http://localhost:8080
         VITE_CHAT_SERVICE_URL: http://localhost:8080
         VITE_CHAT_WS_URL: http://localhost:8080/ws-chat
-    container_name: chat-assist-ui
+    container_name: aidconnect-ui
     ports:
       - "3000:80"
 
@@ -326,11 +326,11 @@ services:
       dockerfile: Dockerfile.backend
       args:
         SERVICE_MODULE: gateway-service
-    container_name: gateway-service-chat-assist
+    container_name: gateway-service-aidconnect
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: gateway-service
-      JWT_SECRET: ${JWT_SECRET:-chat-assist-jwt-secret-key-min-32-chars-required-by-hs256}
+      JWT_SECRET: ${JWT_SECRET:-aidconnect-jwt-secret-key-min-32-chars-required-by-hs256}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-300000}
       LOG_DIR: /app/logs
       SPRING_DATA_REDIS_HOST: redis
@@ -344,7 +344,7 @@ services:
     depends_on:
       discovery-service:
         condition: service_healthy   # wait for Eureka HTTP port to be ready
-      chat-assist-ui:
+      aidconnect-ui:
         condition: service_started
 
 volumes:

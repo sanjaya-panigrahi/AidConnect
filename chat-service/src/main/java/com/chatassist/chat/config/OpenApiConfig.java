@@ -16,10 +16,10 @@ public class OpenApiConfig {
     public OpenAPI chatServiceOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Chat Assist - Chat Service API")
+                        .title("AidConnect - Chat Service API")
                         .description("Messaging APIs for direct chat, assistants, and message status tracking.")
                         .version("v1")
-                        .contact(new Contact().name("Chat Assist Team")))
+                        .contact(new Contact().name("AidConnect Team")))
                 .servers(List.of(new Server().url("/").description("Current environment")));
     }
 }

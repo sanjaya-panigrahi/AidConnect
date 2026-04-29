@@ -1,10 +1,10 @@
-# Chat Assist App
+# AidConnect
 
 Real-time chat application built as a Maven multi-module microservices system.
 
 ## What is implemented today
 
-- React/Vite UI in `chat-assist-ui`
+- React/Vite UI in `aidconnect-ui`
 - Spring Cloud Gateway in `gateway-service`
 - Eureka discovery in `discovery-service`
 - User management and authentication in `user-service`
@@ -18,7 +18,7 @@ Real-time chat application built as a Maven multi-module microservices system.
 
 | Module | Port | Role |
 |---|---:|---|
-| `chat-assist-ui` | 3000 | Browser UI |
+| `aidconnect-ui` | 3000 | Browser UI |
 | `gateway-service` | 8080 | Entry point, auth, routing |
 | `user-service` | 8081 | Registration, login, directory, activity |
 | `chat-service` | 8082 | Message APIs, WebSocket, Kafka publish |

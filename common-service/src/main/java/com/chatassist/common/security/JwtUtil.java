@@ -16,7 +16,7 @@ import java.util.Optional;
 public class JwtUtil {
     public static final String USER_ID_CLAIM = "userId";
 
-    private static final String DEFAULT_SECRET = "chat-assist-jwt-secret-key-min-32-chars-required-by-hs256";
+    private static final String DEFAULT_SECRET = "aidconnect-jwt-secret-key-min-32-chars-required-by-hs256";
     private static final long DEFAULT_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 
     private static final String SECRET_PROPERTY = "chatassist.jwt.secret";

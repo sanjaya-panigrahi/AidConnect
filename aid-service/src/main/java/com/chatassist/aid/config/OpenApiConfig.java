@@ -22,10 +22,10 @@ public class OpenApiConfig {
     public OpenAPI aidServiceOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Chat Assist - AID Service API")
+                        .title("AidConnect - AID Service API")
                         .description("Appointment scheduling and assistance service for handling appointment booking inquiries.")
                         .version("v1")
-                        .contact(new Contact().name("Chat Assist Team")))
+                        .contact(new Contact().name("AidConnect Team")))
                 .servers(List.of(new Server().url("/").description("Current environment")));
     }
 }

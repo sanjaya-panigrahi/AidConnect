@@ -96,7 +96,7 @@ spring:
 
         # UI catch-all — must be LAST so API/WS routes take priority
         - id: chat-ui
-          uri: http://chat-assist-ui:80
+          uri: http://aidconnect-ui:80
           predicates:
             - Path=/**
           order: 9999

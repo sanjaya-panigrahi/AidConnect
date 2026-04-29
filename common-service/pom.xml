@@ -4,14 +4,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.chatassist</groupId>
-        <artifactId>chat-assist-app</artifactId>
+        <groupId>com.aidconnect</groupId>
+        <artifactId>aidconnect</artifactId>
         <version>1.0.0</version>
     </parent>
 
     <artifactId>common-service</artifactId>
     <name>common-service</name>
-    <description>Shared contracts for chat-assist-app</description>
+    <description>Shared contracts for aidconnect</description>
     <packaging>jar</packaging>
 
     <dependencies>

@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "Chat Assist API Collection",
+    "name": "AidConnect API Collection",
     "description": "Postman collection aligned to currently implemented gateway-exposed APIs. Primary public APIs live in user-service and chat-service; assistant processing is exercised through /api/chats/messages.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
