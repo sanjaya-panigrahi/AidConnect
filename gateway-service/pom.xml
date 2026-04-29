@@ -15,7 +15,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.chatassist</groupId>
+            <groupId>com.aidconnect</groupId>
             <artifactId>common-service</artifactId>
             <version>${project.version}</version>
         </dependency>
