@@ -1,6 +1,7 @@
 /** Conversation header — shows selected user name, type badge, and assistant tips. */
 export default function ChatHeader({ selectedUser, isGuestSession, onMobileMenuOpen }) {
   const assistantUsername = (selectedUser?.username || '').toLowerCase();
+  const isAidAdminSupportContact = assistantUsername.startsWith('aid-admin-');
 
   return (
     <header className="chat-header">
@@ -19,16 +20,19 @@ export default function ChatHeader({ selectedUser, isGuestSession, onMobileMenuO
           {selectedUser
             ? ['aid', 'bot'].includes(assistantUsername)
               ? `@${selectedUser.username}`
+              : isAidAdminSupportContact
+                ? 'Aid admin support contact (9 AM-5 PM). Booking requests must go through @aid.'
               : 'Active conversation'
             : isGuestSession
               ? 'Choose @bot or @aid to start chatting without signing in.'
-              : 'Choose a user or bot to start chatting.'}
+              : 'Choose a user, assistant, or aid-admin support contact to start chatting.'}
         </p>
       </div>
 
-      {assistantUsername === 'aid' && (
+      {(assistantUsername === 'aid' || isAidAdminSupportContact) && (
         <div className="doc-hint">
           Aid · Book doctor appointments using live doctor availability.
+          Booking requests must go through <strong>@aid</strong>.
           Try: &quot;Appointment with Dr X tomorrow at 10 AM&quot;.
           You can also type <strong>@aid</strong> in any chat to route privately here.
         </div>

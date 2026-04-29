@@ -2,10 +2,10 @@
 export default function AuthBrand() {
   return (
     <div className="auth-brand">
-      <div className="auth-brand-mark">CA</div>
-      <h1>Chat Assist</h1>
+      <div className="auth-brand-mark">AC</div>
+      <h1>AidConnect</h1>
       <p className="auth-brand-tagline">
-        Connect with people and AI assistants in real time. Ask questions and get instant help.
+        A connected clinical chat platform for patients, doctors, and AI assistants in one flow.
       </p>
       <div className="auth-brand-features">
         <div className="auth-feature">
@@ -23,7 +23,7 @@ export default function AuthBrand() {
               <path d="M19.1 4.9a9 9 0 0 1 0 14.2M4.9 4.9a9 9 0 0 0 0 14.2" />
             </svg>
           </div>
-          <span>AI chat assistant with <strong style={{ color: '#fff' }}>@bot</strong></span>
+          <span>General AI help with <strong style={{ color: '#fff' }}>@bot</strong></span>
         </div>
         <div className="auth-feature">
           <div className="auth-feature-icon">
@@ -31,7 +31,7 @@ export default function AuthBrand() {
               <path d="M4 5h7l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
             </svg>
           </div>
-          <span>Doctor appointment booking with <strong style={{ color: '#fff' }}>@aid</strong></span>
+          <span>Appointment booking with <strong style={{ color: '#fff' }}>@aid</strong> only</span>
         </div>
       </div>
       <div className="auth-brand-divider" />

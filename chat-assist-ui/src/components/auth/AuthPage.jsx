@@ -92,7 +92,7 @@ export default function AuthPage({ onLoginSuccess, onGuestAccess }) {
         <div className="auth-card">
           <div className="auth-card-header">
             <h2>{mode === 'login' ? 'Welcome back' : 'Create an account'}</h2>
-            <p>{mode === 'login' ? 'Sign in to continue your conversations.' : 'Join ChatAssist and start connecting.'}</p>
+            <p>{mode === 'login' ? 'Sign in to continue your conversations.' : 'Join AidConnect and start connecting.'}</p>
           </div>
 
           <div className="auth-switcher">

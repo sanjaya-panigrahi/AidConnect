@@ -1,7 +1,7 @@
 import { GUEST_USERNAME_PREFIX } from './constants';
 
 // ── LocalStorage key used to persist the JWT token across page reloads ────────
-const JWT_TOKEN_KEY = 'chatassist.jwt';
+const JWT_TOKEN_KEY = 'aidconnect.jwt';
 
 /**
  * Reads the persisted JWT token from localStorage.
@@ -53,7 +53,7 @@ export function createGuestSession() {
     username: `${GUEST_USERNAME_PREFIX}${timestamp.toString(36)}`,
     firstName: 'Guest',
     lastName: 'Assistant',
-    email: 'guest@chatassist.local',
+    email: 'guest@aidconnect.local',
     message: 'Guest assistant access enabled.',
     isGuest: true
   };

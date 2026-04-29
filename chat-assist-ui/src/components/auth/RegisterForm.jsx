@@ -50,7 +50,7 @@ export default function RegisterForm({ form, errors, passwordChecks, passwordStr
       <div className="auth-form-field">
         <label htmlFor="reg-email">Email</label>
         <input
-          id="reg-email" type="email" placeholder="email@chatassist.com"
+          id="reg-email" type="email" placeholder="email@aidconnect.com"
           value={form.email}
           onChange={(e) => onFieldChange('email', e.target.value)}
           autoComplete="email" maxLength={MAX_EMAIL_LENGTH}

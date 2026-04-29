@@ -17,7 +17,7 @@ export default function MessageComposer({
   const placeholder =
     selectedUser?.username === 'aid' ? 'Ask @aid to book an appointment, for example: Dr X tomorrow at 10 AM.' :
     selectedUser?.username === 'bot' ? 'Ask @bot anything…' :
-    'Type a message — use @bot for AI help or @aid for doctor appointment booking.';
+    'Type a message — use @bot for AI help, @aid for booking, or aid-admin support (9 AM-5 PM).';
 
   function handleKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') onSend(e);

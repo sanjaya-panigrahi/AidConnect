@@ -33,7 +33,7 @@ export default function AppSidebar({
       {isGuestSession ? (
         <div className="guest-sidebar-note">
           <strong>Guest assistant mode</strong>
-          <span>Chat only with <strong>@bot</strong> and <strong>@aid</strong>. Sign in to reach other users.</span>
+          <span>Chat only with <strong>@bot</strong> and <strong>@aid</strong>. Booking works via <strong>@aid</strong>. Sign in to reach other users and support admins.</span>
         </div>
       ) : (
         <div className="search-wrap">
