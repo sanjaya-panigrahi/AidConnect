@@ -1,6 +1,6 @@
 # AidConnect
 
-Real-time chat application built as a Maven multi-module microservices system.
+A connected clinical chat platform for patients, doctors, and AI assistants in one flow.
 
 ## What is implemented today
 
@@ -45,6 +45,14 @@ Real-time chat application built as a Maven multi-module microservices system.
 
 ## Run with Docker Compose
 
+Preferred (loads secrets from `secrets/runtime` automatically):
+
+```bash
+./start-compose.sh
+```
+
+Direct compose usage (only if you export vars manually in the same shell):
+
 ```bash
 export MYSQL_ROOT_PASSWORD=dummy
 export USER_DB_PASSWORD=dummy
@@ -62,16 +70,3 @@ docker compose up --build
 - Eureka: `http://localhost:8761`
 - Kafdrop: `http://localhost:9000`
 
-## Canonical documentation
-
-- `DOCUMENTATION_GUIDE.md` — documentation map
-- `PROJECT_ARCHITECTURE_DOCUMENT.md` — detailed architecture and implementation view
-- `ARCHITECTURE_QUICK_REFERENCE.md` — compact operational reference
-- `AUTHENTICATION_GUIDE.md` — verified auth/session flow
-- `POSTMAN_COLLECTION_GUIDE.md` — current API testing guide
-- `IMPLEMENTATION_ROADMAP.md` — next technical improvements
-- `FIXES.md` — consolidated history of implemented fixes
-
-## Notes
-
-This repository previously contained many overlapping fix reports and analysis notes. Those have been consolidated into the canonical documents above so the documentation matches the current code more closely.
